@@ -4,6 +4,55 @@
    %%NAME%% %%VERSION%%
   ---------------------------------------------------------------------------*)
 
+open OUnit2
+module M = Msgpck
+
+(* let uint64 = Serialize.serialize_string @@ `Uint64 Big_int.(succ_big_int @@ big_int_of_int64 Int64.max_int) *)
+(* let int64 = Serialize.serialize_string @@ `Uint64 Big_int.(big_int_of_int64 Int64.min_int) *)
+(* let dbl = Serialize.serialize_string @@ `Double (sqrt 2.) *)
+
+let buf = Bytes.create 4096
+
+let wr ?expected size v =
+  let expected = match expected with Some v -> v | None -> v in
+  let printer t = t |> M.sexp_of_t |> Sexplib.Sexp.to_string in
+  let nb_written = M.Bytes.write buf v in
+  assert_equal ~msg:"nb_written" ~printer:string_of_int size nb_written;
+  let nb_read, msg = M.Bytes.read buf in
+  assert_equal size ~printer:string_of_int nb_read;
+  assert_equal ~msg:"nb_read" ~printer expected msg
+
+let size1 ctx =
+  let l = M.[Nil; Bool true; Bool false; Int 127; Int (-31)] in
+  ListLabels.iter l ~f:(wr 1)
+
+let size2 ctx =
+  let l = M.[Int (-0x7f-1); Int 0xff] in
+  ListLabels.iter l ~f:(wr 2)
+
+let size3 ctx =
+  let l = M.[Int (-0x7fff-1); Int 0xffff] in
+  ListLabels.iter l ~f:(wr 3)
+
+let size5 ctx =
+  let l = M.[None, Int32 Int32.max_int; Some (Uint32 (-1l)), Int 0xffff_ffff] in
+  ListLabels.iter l ~f:(fun (expected, v) -> wr ?expected 5 v)
+
+let size9 ctx =
+  let l = M.[None, Int64 Int64.max_int; None, Float 0.] in
+  ListLabels.iter l ~f:(fun (expected, v) -> wr ?expected 9 v)
+
+let suite =
+  "msgpck" >::: [
+    "size1" >:: size1;
+    "size2" >:: size2;
+    "size3" >:: size3;
+    "size5" >:: size5;
+    "size9" >:: size9;
+  ]
+
+let () = run_test_tt_main suite
+
 (*---------------------------------------------------------------------------
    Copyright (c) 2016 Vincent Bernardoff
 
