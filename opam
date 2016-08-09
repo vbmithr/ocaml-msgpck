@@ -1,0 +1,19 @@
+opam-version: "1.2"
+maintainer: "Vincent Bernardoff <vb@luminar.eu.org>"
+authors: ["Vincent Bernardoff <vb@luminar.eu.org>"]
+homepage: "https://github.com/vbmithr/msgpck"
+doc: "https://vbmithr.github.io/msgpck/doc"
+license: "ISC"
+dev-repo: "https://github.com/vbmithr/msgpck.git"
+bug-reports: "https://github.com/vbmithr/msgpck/issues"
+tags: []
+available: [ ocaml-version >= "4.01.0"]
+depends: [
+  "ocamlfind" {build}
+  "ocamlbuild" {build}
+  "topkg" {build}
+]
+depopts: []
+build:
+[[ "ocaml" "pkg/pkg.ml" "build"
+           "--pinned" "%{pinned}%" ]]

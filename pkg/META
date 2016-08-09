@@ -1,0 +1,7 @@
+description = "msgpack library for OCaml"
+version = "%%VERSION%%"
+requires = ""
+archive(byte) = "msgpck.cma"
+archive(native) = "msgpck.cmxa"
+plugin(byte) = "msgpck.cma"
+plugin(native) = "msgpck.cmxs"
