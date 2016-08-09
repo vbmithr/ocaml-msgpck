@@ -10,6 +10,27 @@
 
 (** {1 Msgpck} *)
 
+type t =
+  | Nil
+  | Bool of bool
+  | Int of int64
+  | Float of float
+  | String of string
+  | Bytes of string
+  | List of t list
+  | Map of (t * t) list
+
+module type S = sig
+  type buf_in
+  type buf_out
+
+  val read : ?pos:int -> buf_in -> int * t
+  val write : ?pos:int -> buf_out -> t -> int
+end
+
+module String : S with type buf_in = string and type buf_out = Bytes.t
+module Bytes : S with type buf_in = Bytes.t and type buf_out = Bytes.t
+
 (*---------------------------------------------------------------------------
    Copyright (c) 2016 Vincent Bernardoff
 
