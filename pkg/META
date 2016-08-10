@@ -1,6 +1,6 @@
 description = "msgpack library for OCaml"
 version = "%%VERSION%%"
-requires = "ocplib-endian"
+requires = "ocplib-endian sexplib"
 archive(byte) = "msgpck.cma"
 archive(native) = "msgpck.cmxa"
 plugin(byte) = "msgpck.cma"
