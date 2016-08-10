@@ -22,8 +22,10 @@ type t =
   | Float of float
   | String of string
   | Bytes of string
+  | Ext of int * string
   | List of t list
-  | Map of (t * t) list [@@deriving sexp]
+  | Map of (t * t) list
+[@@deriving sexp]
 
 module type S = sig
   type buf_in
