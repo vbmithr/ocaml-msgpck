@@ -143,26 +143,27 @@ module Make (S : STRING) = struct
   | Uint64 i -> write_int64 ~pos buf i
   | Float32 i -> write_float ~pos buf i
   | Float f -> write_double ~pos buf f
-  | String s -> write_string ~src:s ~src_pos:pos ~dst:buf ()
-  | Bytes s -> write_bin ~src:s ~src_pos:pos ~dst:buf ()
-  | Ext (t, d) -> write_ext ~src:d ~src_pos:pos ~dst:buf t
+  | String s -> write_string ~src:s ~dst_pos:pos ~dst:buf ()
+  | Bytes s -> write_bin ~src:s ~dst_pos:pos ~dst:buf ()
+  | Ext (t, d) -> write_ext ~src:d ~dst_pos:pos ~dst:buf t
   | List l -> begin
-      let init_pos = match List.length l with
+      let nb_written = match List.length l with
       | len when len <= 0xf -> set_int8 buf pos @@ 0x90 lor len; 1
       | len when len <= 0xffff -> set_int8 buf pos 0xdc; set_int16 buf (pos+1) len; 3
       | len -> set_int8 buf pos 0xdd; set_int32 buf (pos+1) (Int32.of_int len); 5
       in
-      let final_pos = List.fold_left (fun pos e -> pos + write ~pos buf e) init_pos l in
-      final_pos - pos
+      List.fold_left (fun nbw e -> nbw + write ~pos:(pos+nbw) buf e) nb_written l
     end
   | Map l -> begin
-      let init_pos = match List.length l with
+      let nb_written = match List.length l with
       | len when len <= 0xf -> set_int8 buf pos @@ 0x80 lor len; 1
       | len when len <= 0xffff -> set_int8 buf pos 0xde; set_int16 buf (pos+1) len; 3
       | len -> set_int8 buf pos 0xdf; set_int32 buf (pos+1) (Int32.of_int len); 5
       in
-      let final_pos = List.fold_left (fun pos (k,v) -> let klen = write ~pos buf k in pos + klen + write ~pos:(pos+klen) buf v) init_pos l in
-      final_pos - pos
+      List.fold_left begin fun nbw (k,v) ->
+          let nbw = nbw + write ~pos:(pos+nbw) buf k in
+          nbw + write ~pos:(pos+nbw) buf v
+      end nb_written l
     end
 
   let read_one ?(pos=0) buf = match get_uint8 buf pos with
@@ -198,16 +199,6 @@ module Make (S : STRING) = struct
   | i when i >= 0xe0 -> 1, Int (-(i land 0x1f))
   | i -> invalid_arg (Printf.sprintf "read_one: unsupported tag 0x%x" i)
 
-  let read_n ?(pos=0) buf n =
-    let rec inner cur_pos acc n =
-      if n > 0 then
-        let nb_read, elt = read_one ~pos:cur_pos buf in
-        inner (cur_pos+nb_read) (elt::acc) (pred n)
-      else cur_pos, acc
-    in
-    let final_pos, elts = inner pos [] n in
-    final_pos - pos, elts
-
   let pairs l =
     List.fold_left begin fun acc e -> match acc with
     | None, acc -> Some e, acc
@@ -222,7 +213,16 @@ module Make (S : STRING) = struct
   | i when i >= 0 -> i
   | i -> 0xffff_ffff + 1 + i
 
-  let rec read ?(pos=0) buf = match get_uint8 buf pos with
+  let rec read_n ?(pos=0) buf n =
+    let rec inner nbr elts n =
+      if n > 0 then
+        let nbr', elt = read ~pos:(pos+nbr) buf in
+        inner (nbr+nbr') (elt::elts) (pred n)
+      else nbr, elts
+    in
+    inner 0 [] n
+
+  and read ?(pos=0) buf = match get_uint8 buf pos with
   | i when i lsr 4 = 0x8 -> let n = i land 0x0f in read_n ~pos:(pos+1) buf (2*n) |> fun (nb_read, elts) -> 1+nb_read, Map (pairs elts)
   | i when i lsr 4 = 0x9 -> let n = i land 0x0f in read_n ~pos:(pos+1) buf n |> fun (nb_read, elts) -> 1+nb_read, List (List.rev elts)
   | 0xdc -> let n = get_uint16 buf (pos+1) in read_n ~pos:(pos+3) buf n |> fun (nb_read, elts) -> 3+nb_read, List (List.rev elts)

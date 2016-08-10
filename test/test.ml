@@ -9,13 +9,13 @@ module M = Msgpck
 
 let buf = Bytes.create (5+2*0xffff)
 
-let wr ?expected size v =
+let wr ?(section="") ?expected size v =
   let expected = match expected with Some v -> v | None -> v in
   let printer t = t |> M.sexp_of_t |> Sexplib.Sexp.to_string in
   let nb_written = M.Bytes.write buf v in
-  assert_equal ~msg:"nb_written" ~printer:string_of_int size nb_written;
+  assert_equal ~msg:(section ^ ": nb_written") ~printer:string_of_int size nb_written;
   let nb_read, msg = M.Bytes.read buf in
-  assert_equal ~msg:"nb_read" ~printer:string_of_int size nb_read;
+  assert_equal ~msg:(section ^ ": nb_read") ~printer:string_of_int size nb_read;
   assert_equal ~printer expected msg
 
 let size1 ctx =
@@ -39,6 +39,7 @@ let size9 ctx =
   ListLabels.iter l ~f:(fun (expected, v) -> wr ?expected 9 v)
 
 let str ctx =
+  wr ~section:"empty string" 1 @@ M.String "";
   wr 5 (M.String "Bleh");
   wr (0x20+2) (M.String (Bytes.create 0x20 |> Bytes.unsafe_to_string));
   wr (0x100+3) (M.String (Bytes.create 0x100 |> Bytes.unsafe_to_string));
@@ -64,14 +65,20 @@ let gen_list f n =
   in inner [] n
 
 let array ctx =
-  wr (15+1) M.(List (gen_list (fun i -> Int i) 15));
-  wr (0xffff+3) M.(List (gen_list (fun i -> Int 0) 0xffff));
-  wr (0x10000+5) M.(List (gen_list (fun i -> Int 0) 0x10000))
+  wr ~section:"empty list" 1 @@ M.List [];
+  wr ~section:"one elt" 2 M.(List [Nil]);
+  wr ~section:"small array" (15+1) M.(List (gen_list (fun i -> Int i) 15));
+  wr ~section:"medium array" (0xffff+3) M.(List (gen_list (fun i -> Int 0) 0xffff));
+  wr ~section:"large array" (0x10000+5) M.(List (gen_list (fun i -> Int 0) 0x10000));
+  wr ~section:"concatenated lists" 2 M.(List [List []]);
+  wr ~section:"string list" 2 M.(List [String ""])
 
 let map ctx =
-  wr (2*15+1) M.(Map (gen_list (fun i -> Int i, Int i) 15));
-  wr (2*0xffff+3) M.(Map (gen_list (fun i -> Int 0, Int 0) 0xffff));
-  wr (2*0x10000+5) M.(Map (gen_list (fun i -> Int 0, Int 0) 0x10000))
+  wr ~section:"small map" (2*15+1) M.(Map (gen_list (fun i -> Int i, Int i) 15));
+  wr ~section:"medium map" (2*0xffff+3) M.(Map (gen_list (fun i -> Int 0, Int 0) 0xffff));
+  wr ~section:"large map" (2*0x10000+5) M.(Map (gen_list (fun i -> Int 0, Int 0) 0x10000));
+  wr ~section:"concatenated maps" 3 M.(Map [Nil, Map []]);
+  wr ~section:"string -> string" 3 M.(Map [String "", String ""])
 
 let suite =
   "msgpck" >::: [
