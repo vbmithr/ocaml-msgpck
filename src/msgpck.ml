@@ -166,6 +166,32 @@ module Make (S : STRING) = struct
       end nb_written l
     end
 
+  let max_int31 = Int32.(shift_left one 30 |> pred)
+  let min_int31 = Int32.(neg max_int31 |> pred)
+
+  let max_int63 = Int64.(shift_left one 62 |> pred)
+  let min_int63 = Int64.(neg max_int63 |> pred)
+
+  let parse_int32 i = match Sys.word_size with
+  | 32 -> if i >= min_int31 && i <= max_int31 then Int (Int32.to_int i) else Int32 i
+  | 64 -> Int (Int32.to_int i)
+  | _ -> invalid_arg "Sys.word_size"
+
+  let parse_uint32 i = match Sys.word_size with
+  | 32 -> if i >= 0l && i <= max_int31 then Int (Int32.to_int i) else Uint32 i
+  | 64 -> Int (if i >= 0l then Int32.to_int i else 1 lsl 32 + Int32.to_int i)
+  | _ -> invalid_arg "Sys.word_size"
+
+  let parse_int64 i = match Sys.word_size with
+  | 32 -> Int64 i
+  | 64 -> if i >= min_int63 && i <= max_int63 then Int (Int64.to_int i) else Int64 i
+  | _ -> invalid_arg "Sys.word_size"
+
+  let parse_uint64 i = match Sys.word_size with
+  | 32 -> Uint64 i
+  | 64 -> if i >= 0L && i <= max_int63 then Int (Int64.to_int i) else Uint64 i
+  | _ -> invalid_arg "Sys.word_size"
+
   let read_one ?(pos=0) buf = match get_uint8 buf pos with
   | i when i < 0x80 -> 1, Int (i land 0x7f)
   | i when i lsr 5 = 5 -> let len = (i land 0x1f) in succ len, String (sub buf (pos+1) len)
@@ -182,12 +208,12 @@ module Make (S : STRING) = struct
   | 0xcb -> 9, Float (get_double buf @@ pos+1)
   | 0xcc -> 2, Int (get_uint8 buf @@ pos+1)
   | 0xcd -> 3, Int (get_uint16 buf @@ pos+1)
-  | 0xce -> 5, Uint32 (get_int32 buf @@ pos+1)
-  | 0xcf -> 9, Uint64 (get_int64 buf @@ pos+1)
+  | 0xce -> 5, parse_uint32 (get_int32 buf @@ pos+1)
+  | 0xcf -> 9, parse_uint64 (get_int64 buf @@ pos+1)
   | 0xd0 -> 2, Int (get_int8 buf @@ pos+1)
   | 0xd1 -> 3, Int (get_int16 buf @@ pos+1)
-  | 0xd2 -> 5, Int32 (get_int32 buf @@ pos+1)
-  | 0xd3 -> 9, Int64 (get_int64 buf @@ pos+1)
+  | 0xd2 -> 5, parse_int32 (get_int32 buf @@ pos+1)
+  | 0xd3 -> 9, parse_int64 (get_int64 buf @@ pos+1)
   | 0xd4 -> 3, let typ = get_int8 buf (pos+1) in Ext (typ, (sub buf (pos+2) 1))
   | 0xd5 -> 4, let typ = get_int8 buf (pos+1) in Ext (typ, (sub buf (pos+2) 2))
   | 0xd6 -> 6, let typ = get_int8 buf (pos+1) in Ext (typ, (sub buf (pos+2) 4))

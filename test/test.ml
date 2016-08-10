@@ -31,7 +31,10 @@ let size3 ctx =
   ListLabels.iter l ~f:(wr 3)
 
 let size5 ctx =
-  let l = M.[None, Int32 Int32.max_int; Some (Uint32 (-1l)), Int 0xffff_ffff] in
+  let l = M.[Some (Int Int32.(to_int max_int)), Int32 Int32.max_int;
+             None, Int 0xffff_ffff
+            ]
+  in
   ListLabels.iter l ~f:(fun (expected, v) -> wr ?expected 5 v)
 
 let size9 ctx =
@@ -71,7 +74,8 @@ let array ctx =
   wr ~section:"medium array" (0xffff+3) M.(List (gen_list (fun i -> Int 0) 0xffff));
   wr ~section:"large array" (0x10000+5) M.(List (gen_list (fun i -> Int 0) 0x10000));
   wr ~section:"concatenated lists" 2 M.(List [List []]);
-  wr ~section:"string list" 2 M.(List [String ""])
+  wr ~section:"string list" 2 M.(List [String ""]);
+  wr ~section:"hello wamp" 33 M.(List [Int 23; String "http://google.com"; Map [String "subscriber", Map []]])
 
 let map ctx =
   wr ~section:"small map" (2*15+1) M.(Map (gen_list (fun i -> Int i, Int i) 15));
