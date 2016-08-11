@@ -67,6 +67,36 @@ type t =
   | List of t list
   | Map of (t * t) list [@@deriving sexp]
 
+let of_nil = Nil
+let of_bool b = Bool b
+let of_int i = Int i
+let of_uint32 i = Uint32 i
+let of_int32 i = Int32 i
+let of_uint64 i = Uint64 i
+let of_int64 i = Int64 i
+let of_float32 i = Float32 i
+let of_float f = Float f
+let of_string s = String s
+let of_bytes s = Bytes s
+let of_ext t s = Ext (t, s)
+let of_list l = List l
+let of_map l = Map l
+
+let to_nil = function Nil -> () | _ -> invalid_arg "to_nil"
+let to_bool = function Bool b -> b | _ -> invalid_arg "to_bool"
+let to_int = function Int i -> i | _ -> invalid_arg "to_int"
+let to_uint32 = function Uint32 i -> i | _ -> invalid_arg "to_uint32"
+let to_int32 = function Int32 i -> i | _ -> invalid_arg "to_int32"
+let to_uint64 = function Uint64 i -> i | _ -> invalid_arg "to_uint64"
+let to_int64 = function Int64 i -> i | _ -> invalid_arg "to_int64"
+let to_float32 = function Float32 f -> f | _ -> invalid_arg "to_float32"
+let to_float = function Float f -> f | _ -> invalid_arg "to_float"
+let to_string = function String s -> s | _ -> invalid_arg "to_string"
+let to_bytes = function Bytes b -> b | _ -> invalid_arg "to_bytes"
+let to_ext = function Ext (t, s) -> (t, s) | _ -> invalid_arg "to_ext"
+let to_list = function List l -> l | _ -> invalid_arg "to_list"
+let to_map = function Map l -> l | _ -> invalid_arg "to_map"
+
 module type S = sig
   type buf_in
   type buf_out
