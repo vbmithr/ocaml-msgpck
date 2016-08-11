@@ -29,9 +29,12 @@ module type STRING = sig
 
   val blit : string -> int -> buf_out -> int -> int -> unit
   val sub : buf_in -> int -> int -> string
+  val create_out : int -> buf_out
+  val clear_out : buf_out -> unit
+  val sub_out : buf_out -> int -> int -> string
 end
 
-module BufString = struct
+module SIBO = struct
   type buf_in = string
   type buf_out = Bytes.t
 
@@ -39,9 +42,12 @@ module BufString = struct
 
   let blit = Bytes.blit_string
   let sub = String.sub
+  let create_out = Bytes.create
+  let clear_out _ = ()
+  let sub_out = Bytes.sub_string
 end
 
-module BufBytes = struct
+module BIBO = struct
   type buf_in = Bytes.t
   type buf_out = Bytes.t
 
@@ -49,6 +55,56 @@ module BufBytes = struct
 
   let blit = Bytes.blit_string
   let sub = Bytes.sub_string
+  let create_out = Bytes.create
+  let clear_out _ = ()
+  let sub_out = Bytes.sub_string
+end
+
+module SIBUFO = struct
+  type buf_in = string
+  type buf_out = Buffer.t
+
+  include EndianString.BigEndian_unsafe
+  open EndianBytes.BigEndian_unsafe
+
+  let scratch = Bytes.create 8
+
+  let set_char buf _i c = Buffer.add_char buf c
+  let set_int8 buf _i i = set_int8 scratch 0 i; Buffer.add_subbytes buf scratch 0 1
+  let set_int16 buf _i i = set_int16 scratch 0 i; Buffer.add_subbytes buf scratch 0 2
+  let set_int32 buf _i i = set_int32 scratch 0 i; Buffer.add_subbytes buf scratch 0 4
+  let set_int64 buf _i i = set_int64 scratch 0 i; Buffer.add_subbytes buf scratch 0 8
+  let set_float buf _i f = set_float scratch 0 f; Buffer.add_subbytes buf scratch 0 4
+  let set_double buf _i f = set_double scratch 0 f; Buffer.add_subbytes buf scratch 0 8
+
+  let blit i i_pos o _o_pos len = Buffer.add_substring o i i_pos len
+  let sub = String.sub
+  let create_out = Buffer.create
+  let clear_out = Buffer.clear
+  let sub_out = Buffer.sub
+end
+
+module BIBUFO = struct
+  type buf_in = Bytes.t
+  type buf_out = Buffer.t
+
+  include EndianBytes.BigEndian_unsafe
+
+  let scratch = Bytes.create 8
+
+  let set_char buf _i c = Buffer.add_char buf c
+  let set_int8 buf _i i = set_int8 scratch 0 i; Buffer.add_subbytes buf scratch 0 1
+  let set_int16 buf _i i = set_int16 scratch 0 i; Buffer.add_subbytes buf scratch 0 2
+  let set_int32 buf _i i = set_int32 scratch 0 i; Buffer.add_subbytes buf scratch 0 4
+  let set_int64 buf _i i = set_int64 scratch 0 i; Buffer.add_subbytes buf scratch 0 8
+  let set_float buf _i f = set_float scratch 0 f; Buffer.add_subbytes buf scratch 0 4
+  let set_double buf _i f = set_double scratch 0 f; Buffer.add_subbytes buf scratch 0 8
+
+  let blit i i_pos o _o_pos len = Buffer.add_substring o i i_pos len
+  let sub = Bytes.sub_string
+  let create_out = Buffer.create
+  let clear_out = Buffer.clear
+  let sub_out = Buffer.sub
 end
 
 type t =
@@ -103,6 +159,7 @@ module type S = sig
 
   val read : ?pos:int -> buf_in -> int * t
   val write : ?pos:int -> buf_out -> t -> int
+  val to_string : ?outbuf:buf_out -> t -> string
 end
 
 module Make (S : STRING) = struct
@@ -196,6 +253,11 @@ module Make (S : STRING) = struct
       end nb_written l
     end
 
+  let to_string ?(outbuf=create_out 1024) msg =
+    clear_out outbuf;
+    let nb_written = write outbuf msg in
+    sub_out outbuf 0 nb_written
+
   let max_int31 = Int32.(shift_left one 30 |> pred)
   let min_int31 = Int32.(neg max_int31 |> pred)
 
@@ -288,8 +350,10 @@ module Make (S : STRING) = struct
   | _ -> read_one ~pos buf
 end
 
-module String = Make(BufString)
-module Bytes = Make(BufBytes)
+module String = Make(SIBO)
+module Bytes = Make(BIBO)
+module StringBuf = Make(SIBUFO)
+module BytesBuf = Make(BIBUFO)
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2016 Vincent Bernardoff

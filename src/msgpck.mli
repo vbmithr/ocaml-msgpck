@@ -63,8 +63,11 @@ module type S = sig
 
   val read : ?pos:int -> buf_in -> int * t
   val write : ?pos:int -> buf_out -> t -> int
+  val to_string : ?outbuf:buf_out -> t -> string
 end
 
+module StringBuf : S with type buf_in = string and type buf_out = Buffer.t
+module BytesBuf : S with type buf_in = Bytes.t and type buf_out = Buffer.t
 module String : S with type buf_in = string and type buf_out = Bytes.t
 module Bytes : S with type buf_in = Bytes.t and type buf_out = Bytes.t
 
