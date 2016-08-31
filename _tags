@@ -1,4 +1,9 @@
-true : bin_annot, safe_string, warn(-40), package(bytes), package(ocplib-endian), package(oUnit), package(ppx_sexp_conv)
+true : bin_annot, safe_string, warn(-40), package(bytes)
 
 <src> : include
 <test> : include
+
+<**/*.*>: package(ocplib-endian), \
+          package(ppx_sexp_conv)
+
+<test/*.*>: package(oUnit)
