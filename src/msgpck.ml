@@ -160,7 +160,7 @@ module type S = sig
   val read : ?pos:int -> buf_in -> int * t
   val size : t -> int
   val write : ?pos:int -> buf_out -> t -> int
-  val to_string : ?outbuf:buf_out -> t -> string
+  val to_string : t -> buf_out
 end
 
 module Make (S : STRING) = struct
@@ -309,10 +309,10 @@ module Make (S : STRING) = struct
       end nb_written l
     end
 
-  let to_string ?(outbuf=create_out 1024) msg =
-    clear_out outbuf;
-    let nb_written = write outbuf msg in
-    sub_out outbuf 0 nb_written
+  let to_string msg =
+    let buf = create_out @@ size msg in
+    let _nb_written:int = write buf msg in
+    buf
 
   let max_int31 = Int32.(shift_left one 30 |> pred)
   let min_int31 = Int32.(neg max_int31 |> pred)
