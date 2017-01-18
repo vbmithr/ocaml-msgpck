@@ -13,7 +13,9 @@ let wr ?(section="") ?expected size v =
   let expected = match expected with Some v -> v | None -> v in
   let printer t = t |> M.sexp_of_t |> Sexplib.Sexp.to_string in
   let nb_written = M.Bytes.write buf v in
+  let computed_size = M.Bytes.size v in
   assert_equal ~msg:(section ^ ": nb_written") ~printer:string_of_int size nb_written;
+  assert_equal ~msg:(section ^ ": size") ~printer:string_of_int nb_written computed_size;
   let nb_read, msg = M.Bytes.read buf in
   assert_equal ~msg:(section ^ ": nb_read") ~printer:string_of_int size nb_read;
   assert_equal ~printer expected msg

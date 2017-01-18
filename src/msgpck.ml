@@ -158,6 +158,7 @@ module type S = sig
   type buf_out
 
   val read : ?pos:int -> buf_in -> int * t
+  val size : t -> int
   val write : ?pos:int -> buf_out -> t -> int
   val to_string : ?outbuf:buf_out -> t -> string
 end
@@ -250,6 +251,61 @@ module Make (S : STRING) = struct
       List.fold_left begin fun nbw (k,v) ->
           let nbw = nbw + write ~pos:(pos+nbw) buf k in
           nbw + write ~pos:(pos+nbw) buf v
+      end nb_written l
+    end
+
+  let size_int = function
+  | i when i >= 0 && i <= 0x7f -> 1
+  | i when i >= 0 && i <= 0xff -> 2
+  | i when i >= 0 && i <= 0xffff -> 3
+  | i when i >= 0 && i <= 0xffff_ffff -> 5
+  | i when i >= -0x1f -> 1
+  | i when i >= -0x7f - 1 -> 2
+  | i when i >= -0x7fff - 1 -> 3
+  | i when i >= -0x7fff_ffff - 1 -> 5
+  | i -> 9
+
+  let size_string str = match String.length str with
+    | n when n <= 0x1f -> n+1
+    | n when n <= 0xff -> n+2
+    | n when n <= 0xffff -> n+3
+    | n -> n+5
+
+  let size_ext str = match String.length str with
+    | 1 -> 1+2
+    | 2 -> 2+2
+    | 4 -> 4+2
+    | 8 -> 8+2
+    | 16 -> 16+2
+    | n when n <= 0xff -> n+3
+    | n when n <= 0xffff -> n+4
+    | n -> n+6
+
+  let rec size = function
+  | Nil -> 1
+  | Bool _ -> 1
+  | Int i -> size_int i
+  | Int32 _ | Uint32 _ | Float32 _ -> 5
+  | Int64 _ | Uint64 _ | Float _ -> 9
+  | String s | Bytes s -> size_string s
+  | Ext (_typ, s) -> size_ext s
+  | List l -> begin
+      let nb_written = match List.length l with
+      | len when len <= 0xf -> 1
+      | len when len <= 0xffff -> 3
+      | len -> 5
+      in
+      List.fold_left (fun nbw e -> nbw + size e) nb_written l
+    end
+  | Map l -> begin
+      let nb_written = match List.length l with
+      | len when len <= 0xf -> 1
+      | len when len <= 0xffff -> 3
+      | len -> 5
+      in
+      List.fold_left begin fun nbw (k,v) ->
+          let nbw = nbw + size k in
+          nbw + size v
       end nb_written l
     end
 
