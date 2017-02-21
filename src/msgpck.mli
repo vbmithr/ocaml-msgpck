@@ -25,7 +25,6 @@ type t =
   | Ext of int * string
   | List of t list
   | Map of (t * t) list
-[@@deriving sexp]
 
 val of_nil : t
 val of_bool : bool -> t

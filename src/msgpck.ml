@@ -4,8 +4,6 @@
    %%NAME%% %%VERSION%%
   ---------------------------------------------------------------------------*)
 
-open Sexplib.Std
-
 module type STRING = sig
   type buf_in
   type buf_out
@@ -121,7 +119,7 @@ type t =
   | Bytes of string
   | Ext of int * string
   | List of t list
-  | Map of (t * t) list [@@deriving sexp]
+  | Map of (t * t) list
 
 let of_nil = Nil
 let of_bool b = Bool b
