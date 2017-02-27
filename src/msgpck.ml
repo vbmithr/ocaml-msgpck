@@ -174,11 +174,11 @@ module Make (S : STRING) = struct
   | i when i >= 0 && i <= 0xff -> set_int16 buf pos (0xcc lsl 8 + i); 2
   | i when i >= 0 && i <= 0xffff -> set_int8 buf pos 0xcd; set_int16 buf (pos+1) i; 3
   | i when i >= 0 && i <= 0xffff_ffff -> set_int8 buf pos 0xce; set_int32 buf (pos+1) @@ Int32.of_int i; 5
-  | i when i >= -0x1f -> set_int8 buf pos @@ 0xe0 lor (-i); 1
-  | i when i >= -0x7f - 1 -> set_int16 buf pos @@ 0xd0 lsl 8 + (-i); 2
-  | i when i >= -0x7fff - 1 -> set_int8 buf pos 0xd1; set_int16 buf (pos+1) (-i); 3
-  | i when i >= -0x7fff_ffff - 1 -> set_int8 buf pos 0xd2; set_int32 buf (pos+1) Int32.(i |> of_int |> neg); 5
-  | i -> set_int8 buf pos 0xd3; set_int64 buf (pos+1) @@ Int64.(i |> of_int |> neg); 9
+  | i when i >= -0x1f - 1 -> set_int8 buf pos i; 1
+  | i when i >= -0x7f - 1 -> set_int8 buf pos @@ 0xd0; set_int8 buf (pos+1) i; 2
+  | i when i >= -0x7fff - 1 -> set_int8 buf pos 0xd1; set_int16 buf (pos+1) i; 3
+  | i when i >= -0x7fff_ffff - 1 -> set_int8 buf pos 0xd2; set_int32 buf (pos+1) @@ Int32.of_int i; 5
+  | i -> set_int8 buf pos 0xd3; set_int64 buf (pos+1) @@ Int64.of_int i; 9
 
   let write_uint32 ?(pos=0) buf i =
     set_int8 buf pos 0xce; set_int32 buf (pos+1) i; 5
@@ -257,7 +257,7 @@ module Make (S : STRING) = struct
   | i when i >= 0 && i <= 0xff -> 2
   | i when i >= 0 && i <= 0xffff -> 3
   | i when i >= 0 && i <= 0xffff_ffff -> 5
-  | i when i >= -0x1f -> 1
+  | i when i >= -0x1f - 1 -> 1
   | i when i >= -0x7f - 1 -> 2
   | i when i >= -0x7fff - 1 -> 3
   | i when i >= -0x7fff_ffff - 1 -> 5
@@ -368,7 +368,7 @@ module Make (S : STRING) = struct
   | 0xd9 -> let len = get_uint8 buf (pos+1) in len+2, String (sub buf (pos+2) len)
   | 0xda -> let len = get_uint16 buf (pos+1) in len+3, String (sub buf (pos+3) len)
   | 0xdb -> let len = get_int32 buf (pos+1) |> Int32.to_int in len+5, String (sub buf (pos+5) len)
-  | i when i >= 0xe0 -> 1, Int (-(i land 0x1f))
+  | i when i >= 0xe0 -> 1, Int (get_int8 buf pos)
   | i -> invalid_arg (Printf.sprintf "read_one: unsupported tag 0x%x" i)
 
   let pairs l =

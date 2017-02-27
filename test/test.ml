@@ -19,8 +19,21 @@ let wr ?(section="") ?expected size v =
   assert_equal ~msg:(section ^ ": nb_read") ~printer:string_of_int size nb_read;
   assert_equal expected msg
 
+let check ~expected buf =
+  let nb_read, msg = M.Bytes.read buf in
+  assert_equal expected msg
+
+let negative_ints ctx =
+  check ~expected:(Int (-1)) @@ Bytes.of_string "\xff" ;
+  check ~expected:(Int (-33)) @@ Bytes.of_string "\xd0\xdf" ;
+  check ~expected:(Int (-32767)) @@ Bytes.of_string "\xd1\x80\x01" ;
+  check ~expected:(Int (-32768)) @@ Bytes.of_string "\xd2\xff\xff\x80\x00" ;
+  check ~expected:(Int (-2147483647)) @@ Bytes.of_string "\xd2\x80\x00\x00\x01" ;
+  check ~expected:(Int (-2147483648)) @@ Bytes.of_string "\xd3\xff\xff\xff\xff\x80\x00\x00\x00"
+
 let size1 ctx =
-  let l = M.[Nil; Bool true; Bool false; Int 127; Int (-31)] in
+  let l = M.[Nil; Bool true; Bool false; Int 127;
+             Int (-32); Int (-31); Int (-30); Int (-2) ;Int (-1)] in
   ListLabels.iter l ~f:(wr 1)
 
 let size2 ctx =
@@ -87,6 +100,7 @@ let map ctx =
 
 let suite =
   "msgpck" >::: [
+    "negative_ints" >:: negative_ints;
     "size1" >:: size1;
     "size2" >:: size2;
     "size3" >:: size3;
