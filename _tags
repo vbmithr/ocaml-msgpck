@@ -1,8 +1,0 @@
-true : bin_annot, safe_string, warn(-40), package(bytes)
-
-<src> : include
-<test> : include
-
-<**/*.*>: package(ocplib-endian)
-
-<test/*.*>: package(oUnit)

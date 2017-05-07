@@ -1,10 +1,5 @@
 all:
-	./build
-	./build test
-	./test.native
-
-test:
-	./build test
+	jbuilder build @install @runtest
 
 clean:
-	./build clean
+	rm -rf _build
