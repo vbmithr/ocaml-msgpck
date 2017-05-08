@@ -6,7 +6,7 @@ msgpck is TODO
 
 msgpck is distributed under the ISC license.
 
-Homepage: https://github.com/vbmithr/msgpck  
+Homepage: https://github.com/vbmithr/ocaml-msgpck 
 Contact: Vincent Bernardoff `<vb@luminar.eu.org>`
 
 ## Installation
