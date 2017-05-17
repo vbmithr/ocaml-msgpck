@@ -105,23 +105,29 @@ module BIBUFO = struct
   let sub_out = Buffer.sub
 end
 
-type t =
-  | Nil
-  | Bool of bool
-  | Int of int
-  | Uint32 of int32
-  | Int32 of int32
-  | Uint64 of int64
-  | Int64 of int64
-  | Float32 of int32
-  | Float of float
-  | String of string
-  | Bytes of string
-  | Ext of int * string
-  | List of t list
-  | Map of (t * t) list
+type uint32
+type uint64
+type float32
+type bstring
 
-let rec pp ppf t =
+type _ t =
+  | Nil : unit t
+  | Bool : bool -> bool t
+  | Int : int -> int t
+  | Uint32 : int32 -> uint32 t
+  | Int32 : int32 -> int32 t
+  | Uint64 : int64 -> uint64 t
+  | Int64 : int64 -> int64 t
+  | Float32 : int32 -> float32 t
+  | Float : float -> float t
+  | String : string -> string t
+  | Bytes : string -> bstring t
+  | Ext : (int * string) -> (int * string) t
+  | List : 'a t list -> 'a t list t
+  | Map : ('a t * 'b t) list -> ('a t * 'b t) list t
+  (** MessagePack types. *)
+
+let rec pp : type a. Format.formatter -> a t -> unit = fun ppf t ->
   let open Format in
   match t with
   | Nil -> pp_print_string ppf "()"
@@ -148,7 +154,7 @@ let rec pp ppf t =
 let show t =
   Format.asprintf "%a" pp t
 
-let of_nil = Nil
+let nil = Nil
 let of_bool b = Bool b
 let of_int i = Int i
 let of_uint32 i = Uint32 i
@@ -163,29 +169,29 @@ let of_ext t s = Ext (t, s)
 let of_list l = List l
 let of_map l = Map l
 
-let to_nil = function Nil -> () | _ -> invalid_arg "to_nil"
-let to_bool = function Bool b -> b | _ -> invalid_arg "to_bool"
-let to_int = function Int i -> i | _ -> invalid_arg "to_int"
-let to_uint32 = function Uint32 i -> i | _ -> invalid_arg "to_uint32"
-let to_int32 = function Int32 i -> i | _ -> invalid_arg "to_int32"
-let to_uint64 = function Uint64 i -> i | _ -> invalid_arg "to_uint64"
-let to_int64 = function Int64 i -> i | _ -> invalid_arg "to_int64"
-let to_float32 = function Float32 f -> f | _ -> invalid_arg "to_float32"
-let to_float = function Float f -> f | _ -> invalid_arg "to_float"
-let to_string = function String s -> s | _ -> invalid_arg "to_string"
-let to_bytes = function Bytes b -> b | _ -> invalid_arg "to_bytes"
-let to_ext = function Ext (t, s) -> (t, s) | _ -> invalid_arg "to_ext"
-let to_list = function List l -> l | _ -> invalid_arg "to_list"
-let to_map = function Map l -> l | _ -> invalid_arg "to_map"
+let to_nil = function Nil -> ()
+let to_bool = function Bool b -> b
+let to_int = function Int i -> i
+let to_uint32 = function Uint32 i -> i
+let to_int32 = function Int32 i -> i
+let to_uint64 = function Uint64 i -> i
+let to_int64 = function Int64 i -> i
+let to_float32 = function Float32 f -> f
+let to_float = function Float f -> f
+let to_string = function String s -> s
+let to_bytes = function Bytes b -> b
+let to_ext = function Ext (t, s) -> (t, s)
+let to_list = function List l -> l
+let to_map = function Map l -> l
 
 module type S = sig
   type buf_in
   type buf_out
 
-  val read : ?pos:int -> buf_in -> int * t
-  val size : t -> int
-  val write : ?pos:int -> buf_out -> t -> int
-  val to_string : t -> buf_out
+  val read : ?pos:int -> buf_in -> int * _ t
+  val size : _ t -> int
+  val write : ?pos:int -> buf_out -> _ t -> int
+  val to_string : _ t -> buf_out
 end
 
 module Make (S : STRING) = struct
@@ -246,7 +252,7 @@ module Make (S : STRING) = struct
     | n when n <= 0xffff -> set_int32 dst dst_pos (0xc8 lsl 24 + len lsl 8 + typ |> Int32.of_int); blit src src_pos dst (dst_pos+4) len; len+4
     | _ -> set_int8 dst dst_pos 0xc9; set_int32 dst (dst_pos+1) (Int32.of_int len); set_int8 dst (dst_pos+5) typ; blit src src_pos dst (dst_pos+6) len; len+6
 
-  let rec write ?(pos=0) buf = function
+  let rec write : type a. ?pos:int -> buf_out -> a t -> int = fun ?(pos=0) buf -> function
   | Nil -> write_nil ~pos buf
   | Bool b -> write_bool ~pos buf b
   | Int i -> write_int ~pos buf i
@@ -306,13 +312,18 @@ module Make (S : STRING) = struct
     | n when n <= 0xffff -> n+4
     | n -> n+6
 
-  let rec size = function
+  let rec size : type a. a t -> int = function
   | Nil -> 1
   | Bool _ -> 1
   | Int i -> size_int i
-  | Int32 _ | Uint32 _ | Float32 _ -> 5
-  | Int64 _ | Uint64 _ | Float _ -> 9
-  | String s | Bytes s -> size_string s
+  | Int32 _ -> 5
+  | Uint32 _ -> 5
+  | Float32 _ -> 5
+  | Int64 _ -> 9
+  | Uint64 _ -> 9
+  | Float _ -> 9
+  | String s -> size_string s
+  | Bytes s -> size_string s
   | Ext (_typ, s) -> size_ext s
   | List l -> begin
       let nb_written = match List.length l with
@@ -345,26 +356,6 @@ module Make (S : STRING) = struct
   let max_int63 = Int64.(shift_left one 62 |> pred)
   let min_int63 = Int64.(neg max_int63 |> pred)
 
-  let parse_int32 i = match Sys.word_size with
-  | 32 -> if i >= min_int31 && i <= max_int31 then Int (Int32.to_int i) else Int32 i
-  | 64 -> Int (Int32.to_int i)
-  | _ -> invalid_arg "Sys.word_size"
-
-  let parse_uint32 i = match Sys.word_size with
-  | 32 -> if i >= 0l && i <= max_int31 then Int (Int32.to_int i) else Uint32 i
-  | 64 -> Int (if i >= 0l then Int32.to_int i else 1 lsl 32 + Int32.to_int i)
-  | _ -> invalid_arg "Sys.word_size"
-
-  let parse_int64 i = match Sys.word_size with
-  | 32 -> Int64 i
-  | 64 -> if i >= min_int63 && i <= max_int63 then Int (Int64.to_int i) else Int64 i
-  | _ -> invalid_arg "Sys.word_size"
-
-  let parse_uint64 i = match Sys.word_size with
-  | 32 -> Uint64 i
-  | 64 -> if i >= 0L && i <= max_int63 then Int (Int64.to_int i) else Uint64 i
-  | _ -> invalid_arg "Sys.word_size"
-
   let read_one ?(pos=0) buf = match get_uint8 buf pos with
   | i when i < 0x80 -> 1, Int (i land 0x7f)
   | i when i lsr 5 = 5 -> let len = (i land 0x1f) in succ len, String (sub buf (pos+1) len)
@@ -385,7 +376,7 @@ module Make (S : STRING) = struct
   | 0xcf -> 9, parse_uint64 (get_int64 buf @@ pos+1)
   | 0xd0 -> 2, Int (get_int8 buf @@ pos+1)
   | 0xd1 -> 3, Int (get_int16 buf @@ pos+1)
-  | 0xd2 -> 5, parse_int32 (get_int32 buf @@ pos+1)
+  | 0xd2 -> 5, Int32 (get_int32 buf @@ pos+1)
   | 0xd3 -> 9, parse_int64 (get_int64 buf @@ pos+1)
   | 0xd4 -> 3, let typ = get_int8 buf (pos+1) in Ext (typ, (sub buf (pos+2) 1))
   | 0xd5 -> 4, let typ = get_int8 buf (pos+1) in Ext (typ, (sub buf (pos+2) 2))
