@@ -121,6 +121,33 @@ type t =
   | List of t list
   | Map of (t * t) list
 
+let rec pp ppf t =
+  let open Format in
+  match t with
+  | Nil -> pp_print_string ppf "()"
+  | Bool b -> pp_print_bool ppf b
+  | Int i -> pp_print_int ppf i
+  | Uint32 i -> fprintf ppf "%ld" i
+  | Int32 i -> fprintf ppf "%ld" i
+  | Uint64 i -> fprintf ppf "%Ld" i
+  | Int64 i -> fprintf ppf "%Ld" i
+  | Float32 f -> pp_print_float ppf (Int32.to_float f)
+  | Float f -> pp_print_float ppf f
+  | String s -> pp_print_string ppf s
+  | Bytes s -> fprintf ppf "%S" s
+  | Ext (i, b) -> fprintf ppf "(%d %S)" i b
+  | List ts ->
+      let pp_sep ppf () = fprintf ppf ",@ " in
+      fprintf ppf "[@[<hov 0>%a@]]" (pp_print_list ~pp_sep pp) ts
+  | Map ts ->
+      let pp_sep ppf () = fprintf ppf ",@ " in
+      let pp_tuple ppf (k, v) =
+        fprintf ppf "%a:@ %a" pp k pp v in
+      fprintf ppf "{@[<hov 0>%a@]}" (pp_print_list ~pp_sep pp_tuple) ts
+
+let show t =
+  Format.asprintf "%a" pp t
+
 let of_nil = Nil
 let of_bool b = Bool b
 let of_int i = Int i
