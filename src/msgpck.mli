@@ -81,6 +81,12 @@ module type S = sig
       [@raise] Invalid_argument "msg" when there is no valid
       MessagePack value to be read from [buf] at position [pos]. *)
 
+  val read_all : ?pos:int -> buf_in -> int * t list
+  (** [read_all ?pos buf] reads all messages found in [buf].
+
+      [@raise] Invalid_argument "msg" when there is no valid
+      MessagePack value to be read from [buf] at position [pos]. *)
+
   val size : t -> int
   (** [size msg] is the size in bytes of the MessagePack serialization
       of message [msg]. *)

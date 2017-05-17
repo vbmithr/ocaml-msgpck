@@ -25,6 +25,7 @@ module type STRING = sig
   val set_float : buf_out -> int -> float -> unit
   val set_double : buf_out -> int -> float -> unit
 
+  val length : buf_in -> int
   val blit : string -> int -> buf_out -> int -> int -> unit
   val sub : buf_in -> int -> int -> string
   val create_out : int -> buf_out
@@ -38,6 +39,7 @@ module SIBO = struct
 
   include EndianString.BigEndian_unsafe
 
+  let length = String.length
   let blit = Bytes.blit_string
   let sub = String.sub
   let create_out = Bytes.create
@@ -51,6 +53,7 @@ module BIBO = struct
 
   include EndianBytes.BigEndian_unsafe
 
+  let length = Bytes.length
   let blit = Bytes.blit_string
   let sub = Bytes.sub_string
   let create_out = Bytes.create
@@ -75,6 +78,7 @@ module SIBUFO = struct
   let set_float buf _i f = set_float scratch 0 f; Buffer.add_subbytes buf scratch 0 4
   let set_double buf _i f = set_double scratch 0 f; Buffer.add_subbytes buf scratch 0 8
 
+  let length = String.length
   let blit i i_pos o _o_pos len = Buffer.add_substring o i i_pos len
   let sub = String.sub
   let create_out = Buffer.create
@@ -98,6 +102,7 @@ module BIBUFO = struct
   let set_float buf _i f = set_float scratch 0 f; Buffer.add_subbytes buf scratch 0 4
   let set_double buf _i f = set_double scratch 0 f; Buffer.add_subbytes buf scratch 0 8
 
+  let length = Bytes.length
   let blit i i_pos o _o_pos len = Buffer.add_substring o i i_pos len
   let sub = Bytes.sub_string
   let create_out = Buffer.create
@@ -163,26 +168,30 @@ let of_ext t s = Ext (t, s)
 let of_list l = List l
 let of_map l = Map l
 
-let to_nil = function Nil -> () | _ -> invalid_arg "to_nil"
-let to_bool = function Bool b -> b | _ -> invalid_arg "to_bool"
-let to_int = function Int i -> i | _ -> invalid_arg "to_int"
-let to_uint32 = function Uint32 i -> i | _ -> invalid_arg "to_uint32"
-let to_int32 = function Int32 i -> i | _ -> invalid_arg "to_int32"
-let to_uint64 = function Uint64 i -> i | _ -> invalid_arg "to_uint64"
-let to_int64 = function Int64 i -> i | _ -> invalid_arg "to_int64"
-let to_float32 = function Float32 f -> f | _ -> invalid_arg "to_float32"
-let to_float = function Float f -> f | _ -> invalid_arg "to_float"
-let to_string = function String s -> s | _ -> invalid_arg "to_string"
-let to_bytes = function Bytes b -> b | _ -> invalid_arg "to_bytes"
-let to_ext = function Ext (t, s) -> (t, s) | _ -> invalid_arg "to_ext"
-let to_list = function List l -> l | _ -> invalid_arg "to_list"
-let to_map = function Map l -> l | _ -> invalid_arg "to_map"
+let raise_invalid_arg typ v =
+  invalid_arg (Format.asprintf "to_%s: got %a" typ pp v)
+
+let to_nil = function Nil -> () | v -> raise_invalid_arg "nil" v
+let to_bool = function  Bool b -> b | v -> raise_invalid_arg "bool" v
+let to_int = function Int i -> i | v -> raise_invalid_arg "int" v
+let to_uint32 = function Uint32 i -> i | v -> raise_invalid_arg "uint32" v
+let to_int32 = function Int32 i -> i | v -> raise_invalid_arg "int32" v
+let to_uint64 = function Uint64 i -> i | v -> raise_invalid_arg "uint64" v
+let to_int64 = function Int64 i -> i | v -> raise_invalid_arg "int64" v
+let to_float32 = function Float32 f -> f | v -> raise_invalid_arg "float32" v
+let to_float = function Float f -> f | v -> raise_invalid_arg "float" v
+let to_string = function String s -> s | v -> raise_invalid_arg "string" v
+let to_bytes = function Bytes b -> b | v -> raise_invalid_arg "bytes" v
+let to_ext = function Ext (t, s) -> (t, s) | v -> raise_invalid_arg "ext" v
+let to_list = function List l -> l | v -> raise_invalid_arg "list" v
+let to_map = function Map l -> l | v -> raise_invalid_arg "map" v
 
 module type S = sig
   type buf_in
   type buf_out
 
   val read : ?pos:int -> buf_in -> int * t
+  val read_all : ?pos:int -> buf_in -> int * t list
   val size : t -> int
   val write : ?pos:int -> buf_out -> t -> int
   val to_string : t -> buf_out
@@ -429,6 +438,16 @@ module Make (S : STRING) = struct
   | 0xde -> let n = get_uint16 buf (pos+1) in read_n ~pos:(pos+3) buf (2*n) |> fun (nb_read, elts) -> 3+nb_read, Map (pairs elts)
   | 0xdf -> let n = get_uint32 buf (pos+1) in read_n ~pos:(pos+5) buf (2*n) |> fun (nb_read, elts) -> 5+nb_read, Map (pairs elts)
   | _ -> read_one ~pos buf
+
+  let read_all ?(pos=0) buf =
+    let len = length buf in
+    let rec inner acc pos =
+      if pos >= len then pos, List.rev acc
+      else
+      let new_pos, msg = read ~pos buf in
+      inner (msg :: acc) new_pos
+    in
+    inner [] pos
 end
 
 module String = Make(SIBO)
