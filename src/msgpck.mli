@@ -27,6 +27,9 @@ type t =
   | Map of (t * t) list
   (** MessagePack types. *)
 
+val pp : Format.formatter -> t -> unit
+val show : t -> string
+
 (** {1 Conversion functions OCaml -> MessagePack } *)
 
 val of_nil : t
