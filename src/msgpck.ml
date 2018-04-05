@@ -66,7 +66,6 @@ module SIBUFO = struct
   type buf_out = Buffer.t
 
   include EndianString.BigEndian_unsafe
-  open EndianBytes.BigEndian_unsafe
 
   let scratch = Bytes.create 8
 
@@ -262,7 +261,7 @@ module Make (S : STRING) = struct
   | Int32 i -> write_int32 ~pos buf i
   | Uint32 i -> write_uint32 ~pos buf i
   | Int64 i -> write_int64 ~pos buf i
-  | Uint64 i -> write_int64 ~pos buf i
+  | Uint64 i -> write_uint64 ~pos buf i
   | Float32 i -> write_float ~pos buf i
   | Float f -> write_double ~pos buf f
   | String s -> write_string ~src:s ~dst_pos:pos ~dst:buf ()
