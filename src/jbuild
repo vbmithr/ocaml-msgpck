@@ -3,3 +3,10 @@
   (public_name msgpck)
   (modules (msgpck))
   (libraries (ocplib-endian))))
+
+(library
+ ((name        msgpck_repr)
+  (public_name msgpck-repr)
+  (optional)
+  (modules (msgpck_repr))
+  (libraries (msgpck ocplib-json-typed))))

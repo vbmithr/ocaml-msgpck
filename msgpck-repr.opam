@@ -1,5 +1,5 @@
 opam-version: "1.2"
-name: "msgpck"
+name: "msgpck-repr"
 version: "1.3"
 maintainer: "Vincent Bernardoff <vb@luminar.eu.org>"
 authors: "Vincent Bernardoff <vb@luminar.eu.org>"
@@ -11,6 +11,7 @@ tags: []
 available: [ ocaml-version >= "4.02.0" ]
 depends: [
   "jbuilder" {build & >= "1.0+beta19.1"}
-  "ocplib-endian" {>= "1.0"}
+  "msgpck" {= "1.3"}
+  "ocplib-json-typed" {>= "0.6"}
 ]
 build:[ "jbuilder" "build" "-j" jobs "@install" ]
