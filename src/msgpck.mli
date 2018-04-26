@@ -27,6 +27,9 @@ type t =
   | Map of (t * t) list
   (** MessagePack types. *)
 
+val compare : t -> t -> int
+val equal : t -> t -> bool
+
 val pp : Format.formatter -> t -> unit
 val show : t -> string
 

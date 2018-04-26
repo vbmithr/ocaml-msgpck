@@ -125,6 +125,9 @@ type t =
   | List of t list
   | Map of (t * t) list
 
+let compare = Pervasives.compare
+let equal = Pervasives.(=)
+
 let rec pp ppf t =
   let open Format in
   match t with
