@@ -1,6 +1,6 @@
 (executable
  ((name test)
-  (libraries (msgpck oUnit))))
+  (libraries (msgpck alcotest))))
 
 (alias
  ((name    runtest)
