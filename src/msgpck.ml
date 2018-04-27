@@ -283,7 +283,7 @@ module Make (S : STRING) = struct
   | i when i >= -0x7f - 1 -> 2
   | i when i >= -0x7fff - 1 -> 3
   | i when i >= -0x7fff_ffff - 1 -> 5
-  | i -> 9
+  | _ -> 9
 
   let size_string str = match String.length str with
     | n when n <= 0x1f -> n+1
@@ -313,7 +313,7 @@ module Make (S : STRING) = struct
       let nb_written = match List.length l with
       | len when len <= 0xf -> 1
       | len when len <= 0xffff -> 3
-      | len -> 5
+      | _ -> 5
       in
       List.fold_left (fun nbw e -> nbw + size e) nb_written l
     end
@@ -321,7 +321,7 @@ module Make (S : STRING) = struct
       let nb_written = match List.length l with
       | len when len <= 0xf -> 1
       | len when len <= 0xffff -> 3
-      | len -> 5
+      | _ -> 5
       in
       List.fold_left begin fun nbw (k,v) ->
           let nbw = nbw + size k in

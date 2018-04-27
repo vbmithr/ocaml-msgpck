@@ -21,7 +21,7 @@ let wr ?(section="") ?expected size v =
   Alcotest.check msgpck (section ^ ": msgpck equality") expected msg
 
 let check ?(msg="") testable ~expected buf =
-  let nb_read, msgpck = M.Bytes.read buf in
+  let _nb_read, msgpck = M.Bytes.read buf in
   Alcotest.check testable msg expected msgpck
 
 let negative_ints () =
@@ -86,16 +86,16 @@ let array () =
   wr ~section:"empty list" 1 @@ M.List [];
   wr ~section:"one elt" 2 M.(List [Nil]);
   wr ~section:"small array" (15+1) M.(List (gen_list (fun i -> Int i) 15));
-  wr ~section:"medium array" (0xffff+3) M.(List (gen_list (fun i -> Int 0) 0xffff));
-  wr ~section:"large array" (0x10000+5) M.(List (gen_list (fun i -> Int 0) 0x10000));
+  wr ~section:"medium array" (0xffff+3) M.(List (gen_list (fun _ -> Int 0) 0xffff));
+  wr ~section:"large array" (0x10000+5) M.(List (gen_list (fun _ -> Int 0) 0x10000));
   wr ~section:"concatenated lists" 2 M.(List [List []]);
   wr ~section:"string list" 2 M.(List [String ""]);
   wr ~section:"hello wamp" 33 M.(List [Int 23; String "http://google.com"; Map [String "subscriber", Map []]])
 
 let map () =
   wr ~section:"small map" (2*15+1) M.(Map (gen_list (fun i -> Int i, Int i) 15));
-  wr ~section:"medium map" (2*0xffff+3) M.(Map (gen_list (fun i -> Int 0, Int 0) 0xffff));
-  wr ~section:"large map" (2*0x10000+5) M.(Map (gen_list (fun i -> Int 0, Int 0) 0x10000));
+  wr ~section:"medium map" (2*0xffff+3) M.(Map (gen_list (fun _ -> Int 0, Int 0) 0xffff));
+  wr ~section:"large map" (2*0x10000+5) M.(Map (gen_list (fun _ -> Int 0, Int 0) 0x10000));
   wr ~section:"concatenated maps" 3 M.(Map [Nil, Map []]);
   wr ~section:"string -> string" 3 M.(Map [String "", String ""])
 
