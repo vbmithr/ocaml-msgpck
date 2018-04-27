@@ -8,7 +8,6 @@ module type STRING = sig
   type buf_in
   type buf_out
 
-  val get_char : buf_in -> int -> char
   val get_uint8 : buf_in -> int -> int
   val get_int8 : buf_in -> int -> int
   val get_uint16 : buf_in -> int -> int
@@ -17,20 +16,17 @@ module type STRING = sig
   val get_int64 : buf_in -> int -> int64
   val get_float : buf_in -> int -> float
   val get_double : buf_in -> int -> float
-  val set_char : buf_out -> int -> char -> unit
+
   val set_int8 : buf_out -> int -> int -> unit
   val set_int16 : buf_out -> int -> int -> unit
   val set_int32 : buf_out -> int -> int32 -> unit
   val set_int64 : buf_out -> int -> int64 -> unit
-  val set_float : buf_out -> int -> float -> unit
   val set_double : buf_out -> int -> float -> unit
 
   val length : buf_in -> int
   val blit : string -> int -> buf_out -> int -> int -> unit
   val sub : buf_in -> int -> int -> string
   val create_out : int -> buf_out
-  val clear_out : buf_out -> unit
-  val sub_out : buf_out -> int -> int -> string
 end
 
 module SIBO = struct
@@ -43,8 +39,6 @@ module SIBO = struct
   let blit = Bytes.blit_string
   let sub = String.sub
   let create_out = Bytes.create
-  let clear_out _ = ()
-  let sub_out = Bytes.sub_string
 end
 
 module BIBO = struct
@@ -57,8 +51,6 @@ module BIBO = struct
   let blit = Bytes.blit_string
   let sub = Bytes.sub_string
   let create_out = Bytes.create
-  let clear_out _ = ()
-  let sub_out = Bytes.sub_string
 end
 
 module SIBUFO = struct
@@ -69,20 +61,16 @@ module SIBUFO = struct
 
   let scratch = Bytes.create 8
 
-  let set_char buf _i c = Buffer.add_char buf c
   let set_int8 buf _i i = set_int8 scratch 0 i; Buffer.add_subbytes buf scratch 0 1
   let set_int16 buf _i i = set_int16 scratch 0 i; Buffer.add_subbytes buf scratch 0 2
   let set_int32 buf _i i = set_int32 scratch 0 i; Buffer.add_subbytes buf scratch 0 4
   let set_int64 buf _i i = set_int64 scratch 0 i; Buffer.add_subbytes buf scratch 0 8
-  let set_float buf _i f = set_float scratch 0 f; Buffer.add_subbytes buf scratch 0 4
   let set_double buf _i f = set_double scratch 0 f; Buffer.add_subbytes buf scratch 0 8
 
   let length = String.length
   let blit i i_pos o _o_pos len = Buffer.add_substring o i i_pos len
   let sub = String.sub
   let create_out = Buffer.create
-  let clear_out = Buffer.clear
-  let sub_out = Buffer.sub
 end
 
 module BIBUFO = struct
@@ -93,20 +81,16 @@ module BIBUFO = struct
 
   let scratch = Bytes.create 8
 
-  let set_char buf _i c = Buffer.add_char buf c
   let set_int8 buf _i i = set_int8 scratch 0 i; Buffer.add_subbytes buf scratch 0 1
   let set_int16 buf _i i = set_int16 scratch 0 i; Buffer.add_subbytes buf scratch 0 2
   let set_int32 buf _i i = set_int32 scratch 0 i; Buffer.add_subbytes buf scratch 0 4
   let set_int64 buf _i i = set_int64 scratch 0 i; Buffer.add_subbytes buf scratch 0 8
-  let set_float buf _i f = set_float scratch 0 f; Buffer.add_subbytes buf scratch 0 4
   let set_double buf _i f = set_double scratch 0 f; Buffer.add_subbytes buf scratch 0 8
 
   let length = Bytes.length
   let blit i i_pos o _o_pos len = Buffer.add_substring o i i_pos len
   let sub = Bytes.sub_string
   let create_out = Buffer.create
-  let clear_out = Buffer.clear
-  let sub_out = Buffer.sub
 end
 
 type t =
