@@ -72,9 +72,9 @@ val to_map : t -> (t * t) list
 module type S = sig
   type buf_in
   (** Type of input buffer (where MessagePack data will be read) *)
+
   type buf_out
-  (** Type of output buffer (where MessagePack data will be
-      written) *)
+  (** Type of output buffer (where MessagePack data will be written) *)
 
   val read : ?pos:int -> buf_in -> int * t
   (** [read ?pos buf] is [(nb_read, t)], where [nb_read] is the number
