@@ -1,3 +1,12 @@
+v1.4 2018-04-27 Paris
+---------------------
+
+* compile in dev mode (removed dead code and unused variables)
+* add optional `Msgpck_repr` module compatible with `ocplib-json-typed`
+* tests: switch to alcotest
+* add compare and equal functions
+* bugfix: uint64 were previously written as int64
+
 v1.3 2017-05-17 Paris
 ---------------------
 
