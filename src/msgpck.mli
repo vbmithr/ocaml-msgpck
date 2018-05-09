@@ -29,6 +29,9 @@ type t =
 
 val compare : t -> t -> int
 val equal : t -> t -> bool
+val size : t -> int
+(** [size msg] is the size in bytes of the MessagePack serialization
+    of message [msg]. *)
 
 val pp : Format.formatter -> t -> unit
 val show : t -> string
@@ -89,10 +92,6 @@ module type S = sig
 
       [@raise] Invalid_argument "msg" when there is no valid
       MessagePack value to be read from [buf] at position [pos]. *)
-
-  val size : t -> int
-  (** [size msg] is the size in bytes of the MessagePack serialization
-      of message [msg]. *)
 
   val write : ?pos:int -> buf_out -> t -> int
   (** [write ?pos buf msg] is [nb_written], the number of bytes

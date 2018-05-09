@@ -13,7 +13,7 @@ let msgpck = Alcotest.testable M.pp M.equal
 let wr ?(section="") ?expected size v =
   let expected = match expected with Some v -> v | None -> v in
   let nb_written = M.Bytes.write buf v in
-  let computed_size = M.Bytes.size v in
+  let computed_size = M.size v in
   Alcotest.(check int (section ^ ": nb_written") size nb_written);
   Alcotest.(check int (section ^ ": size") nb_written computed_size);
   let nb_read, msg = M.Bytes.read buf in
@@ -68,6 +68,15 @@ let bytes () =
   wr (0x100+3) (M.Bytes (Bytes.create 0x100 |> Bytes.unsafe_to_string));
   wr (0x10000+5) (M.Bytes (Bytes.create 0x10000 |> Bytes.unsafe_to_string))
 
+let bytes2 () =
+  let msg = "my_payload is so really long tt" in
+  let msgpck = M.of_bytes msg in
+  let size = M.size msgpck in
+  Alcotest.(check int "bytes2: size" (String.length msg + 2) size) ;
+  let buf = Bytes.create size in
+  let nb_written = M.Bytes.write buf msgpck in
+  Alcotest.(check int "bytes2: size written" size nb_written)
+
 let ext () =
   wr 3 (M.Ext (4, "1"));
   wr 4 (M.Ext (4, "22"));
@@ -108,6 +117,7 @@ let basic = [
   "size9"         , `Quick, size9;
   "str"           , `Quick, str;
   "bytes"         , `Quick, bytes;
+  "bytes2"        , `Quick, bytes2 ;
   "ext"           , `Quick, ext;
   "array"         , `Quick, array;
   "map"           , `Quick, map;
