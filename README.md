@@ -15,7 +15,7 @@ msgpck can be installed with `opam`:
 
     opam install msgpck
 
-If you don't use `opam` consult the [`opam`](opam) file for build
+If you don't use `opam` consult the [`opam`](msgpck.opam) file for build
 instructions.
 
 ## Documentation
