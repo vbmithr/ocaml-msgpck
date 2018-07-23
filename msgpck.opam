@@ -13,4 +13,4 @@ depends: [
   "jbuilder" {build & >= "1.0+beta19.1"}
   "ocplib-endian" {>= "1.0"}
 ]
-build:[ "jbuilder" "build" "-j" jobs "@install" ]
+build:[ "jbuilder" "build" "-p" name "-j" jobs "@install" ]
