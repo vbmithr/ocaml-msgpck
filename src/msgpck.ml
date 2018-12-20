@@ -141,15 +141,16 @@ let rec size = function
     end nb_written l
   end
 
-and size_int = function
-| i when i >= 0 && i <= 0x7f -> 1
-| i when i >= 0 && i <= 0xff -> 2
-| i when i >= 0 && i <= 0xffff -> 3
-| i when i >= 0 && i <= 0xffff_ffff -> 5
-| i when i >= -0x1f - 1 -> 1
-| i when i >= -0x7f - 1 -> 2
-| i when i >= -0x7fff - 1 -> 3
-| i when i >= -0x7fff_ffff - 1 -> 5
+and size_int i =
+  match Int64.of_int i with
+| i when i >= 0L && i <= 0x7fL -> 1
+| i when i >= 0L && i <= 0xffL -> 2
+| i when i >= 0L && i <= 0xffffL -> 3
+| i when i >= 0L && i <= 0xffff_ffffL -> 5
+| i when i >= Int64.(sub (neg 0x1fL) 1L) -> 1
+| i when i >= Int64.(sub (neg 0x7fL) 1L) -> 2
+| i when i >= Int64.(sub (neg 0x7fffL) 1L) -> 3
+| i when i >= Int64.(sub (neg 0x7fff_ffffL) 1L) -> 5
 | _ -> 9
 
 and size_string str =
@@ -253,16 +254,17 @@ module Make (S : STRING) = struct
   let write_float ?(pos=0) buf i = set_int8 buf pos 0xca; set_int32 buf (pos+1) i; 5
   let write_double ?(pos=0) buf f = set_int8 buf pos 0xcb; set_double buf (pos+1) f; 9
 
-  let write_int ?(pos=0) buf = function
-  | i when i >= 0 && i <= 0x7f -> set_int8 buf pos i; 1
-  | i when i >= 0 && i <= 0xff -> set_int16 buf pos (0xcc lsl 8 + i); 2
-  | i when i >= 0 && i <= 0xffff -> set_int8 buf pos 0xcd; set_int16 buf (pos+1) i; 3
-  | i when i >= 0 && i <= 0xffff_ffff -> set_int8 buf pos 0xce; set_int32 buf (pos+1) @@ Int32.of_int i; 5
-  | i when i >= -0x1f - 1 -> set_int8 buf pos i; 1
-  | i when i >= -0x7f - 1 -> set_int8 buf pos @@ 0xd0; set_int8 buf (pos+1) i; 2
-  | i when i >= -0x7fff - 1 -> set_int8 buf pos 0xd1; set_int16 buf (pos+1) i; 3
-  | i when i >= -0x7fff_ffff - 1 -> set_int8 buf pos 0xd2; set_int32 buf (pos+1) @@ Int32.of_int i; 5
-  | i -> set_int8 buf pos 0xd3; set_int64 buf (pos+1) @@ Int64.of_int i; 9
+  let write_int ?(pos=0) buf v =
+    match Int64.of_int v with
+    | i when i >= 0L && i <= 0x7fL -> set_int8 buf pos v; 1
+    | i when i >= 0L && i <= 0xffL -> set_int16 buf pos (0xcc lsl 8 + v); 2
+    | i when i >= 0L && i <= 0xffffL -> set_int8 buf pos 0xcd; set_int16 buf (pos+1) v; 3
+    | i when i >= 0L && i <= 0xffff_ffffL -> set_int8 buf pos 0xce; set_int32 buf (pos+1) @@ Int32.of_int v; 5
+    | i when i >= Int64.(sub (neg 0x1fL) 1L) -> set_int8 buf pos v; 1
+    | i when i >= Int64.(sub (neg 0x7fL) 1L) -> set_int8 buf pos @@ 0xd0; set_int8 buf (pos+1) v; 2
+    | i when i >= Int64.(sub (neg 0x7fffL) 1L) -> set_int8 buf pos 0xd1; set_int16 buf (pos+1) v; 3
+    | i when i >= Int64.(sub (neg 0x7fff_ffffL) 1L) -> set_int8 buf pos 0xd2; set_int32 buf (pos+1) @@ Int32.of_int v; 5
+    | i -> set_int8 buf pos 0xd3; set_int64 buf (pos+1) i; 9
 
   let write_uint32 ?(pos=0) buf i =
     set_int8 buf pos 0xce; set_int32 buf (pos+1) i; 5
@@ -410,26 +412,26 @@ module Make (S : STRING) = struct
   | i when i >= 0 -> i
   | i -> 0xffff + 1 + i
 
-  let get_uint32 buf pos = match get_int32 buf pos |> Int32.to_int with
-  | i when i >= 0 -> i
-  | i -> 0xffff_ffff + 1 + i
+  let get_uint32 buf pos = match get_int32 buf pos with
+  | i when i >= 0l -> Int64.of_int32 i
+  | i -> Int64.(add (add 0xffff_ffffL 1L) (of_int32 i))
 
   let rec read_n ?(pos=0) buf n =
     let rec inner nbr elts n =
-      if n > 0 then
+      if n > 0L then
         let nbr', elt = read ~pos:(pos+nbr) buf in
-        inner (nbr+nbr') (elt::elts) (pred n)
+        inner (nbr+nbr') (elt::elts) (Int64.pred n)
       else nbr, elts
     in
     inner 0 [] n
 
   and read ?(pos=0) buf = match get_uint8 buf pos with
-  | i when i lsr 4 = 0x8 -> let n = i land 0x0f in read_n ~pos:(pos+1) buf (2*n) |> fun (nb_read, elts) -> 1+nb_read, Map (pairs elts)
-  | i when i lsr 4 = 0x9 -> let n = i land 0x0f in read_n ~pos:(pos+1) buf n |> fun (nb_read, elts) -> 1+nb_read, List (List.rev elts)
-  | 0xdc -> let n = get_uint16 buf (pos+1) in read_n ~pos:(pos+3) buf n |> fun (nb_read, elts) -> 3+nb_read, List (List.rev elts)
+  | i when i lsr 4 = 0x8 -> let n = i land 0x0f in read_n ~pos:(pos+1) buf (Int64.of_int (2*n)) |> fun (nb_read, elts) -> 1+nb_read, Map (pairs elts)
+  | i when i lsr 4 = 0x9 -> let n = i land 0x0f in read_n ~pos:(pos+1) buf (Int64.of_int n) |> fun (nb_read, elts) -> 1+nb_read, List (List.rev elts)
+  | 0xdc -> let n = get_uint16 buf (pos+1) in read_n ~pos:(pos+3) buf (Int64.of_int n) |> fun (nb_read, elts) -> 3+nb_read, List (List.rev elts)
   | 0xdd -> let n = get_uint32 buf (pos+1) in read_n ~pos:(pos+5) buf n |> fun (nb_read, elts) -> 5+nb_read, List (List.rev elts)
-  | 0xde -> let n = get_uint16 buf (pos+1) in read_n ~pos:(pos+3) buf (2*n) |> fun (nb_read, elts) -> 3+nb_read, Map (pairs elts)
-  | 0xdf -> let n = get_uint32 buf (pos+1) in read_n ~pos:(pos+5) buf (2*n) |> fun (nb_read, elts) -> 5+nb_read, Map (pairs elts)
+  | 0xde -> let n = get_uint16 buf (pos+1) in read_n ~pos:(pos+3) buf (Int64.of_int (2*n)) |> fun (nb_read, elts) -> 3+nb_read, Map (pairs elts)
+  | 0xdf -> let n = get_uint32 buf (pos+1) in read_n ~pos:(pos+5) buf (Int64.mul 2L n) |> fun (nb_read, elts) -> 5+nb_read, Map (pairs elts)
   | _ -> read_one ~pos buf
 
   let read_all ?(pos=0) buf =
