@@ -1,5 +1,5 @@
 all:
-	jbuilder build @install @runtest --dev
+	@dune build @install @runtest
 
 clean:
-	rm -rf _build
+	@dune clean
