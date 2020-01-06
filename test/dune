@@ -1,0 +1,10 @@
+(executable
+ (name test)
+ (libraries msgpck alcotest))
+
+(alias
+ (name runtest)
+ (deps
+  (:< test.exe))
+ (action
+  (run %{<})))

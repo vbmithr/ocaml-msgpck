@@ -2,7 +2,7 @@ msgpck — msgpack library for OCaml
 -------------------------------------------------------------------------------
 %%VERSION%%
 
-msgpck is TODO
+msgpck is a pure OCaml implementation of [msgpack](https://msgpack.org/) serialization and deserialization.
 
 msgpck is distributed under the ISC license.
 
