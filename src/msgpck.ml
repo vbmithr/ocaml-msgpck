@@ -109,8 +109,8 @@ type t =
   | List of t list
   | Map of (t * t) list
 
-let compare = Pervasives.compare
-let equal = Pervasives.(=)
+let compare = Stdlib.compare
+let equal = Stdlib.(=)
 
 let rec size = function
 | Nil -> 1
