@@ -59,13 +59,11 @@ module SIBUFO = struct
 
   include EndianString.BigEndian_unsafe
 
-  let scratch = Bytes.create 8
-
-  let set_int8 buf _i i = set_int8 scratch 0 i; Buffer.add_subbytes buf scratch 0 1
-  let set_int16 buf _i i = set_int16 scratch 0 i; Buffer.add_subbytes buf scratch 0 2
-  let set_int32 buf _i i = set_int32 scratch 0 i; Buffer.add_subbytes buf scratch 0 4
-  let set_int64 buf _i i = set_int64 scratch 0 i; Buffer.add_subbytes buf scratch 0 8
-  let set_double buf _i f = set_double scratch 0 f; Buffer.add_subbytes buf scratch 0 8
+  let set_int8 buf _i i = Buffer.add_int8 buf i
+  let set_int16 buf _i i = Buffer.add_int16_be buf i
+  let set_int32 buf _i i = Buffer.add_int32_be buf i
+  let set_int64 buf _i i = Buffer.add_int64_be buf i
+  let set_double buf _i f = Buffer.add_int64_be buf (Int64.bits_of_float f)
 
   let length = String.length
   let blit i i_pos o _o_pos len = Buffer.add_substring o i i_pos len
@@ -79,13 +77,11 @@ module BIBUFO = struct
 
   include EndianBytes.BigEndian_unsafe
 
-  let scratch = Bytes.create 8
-
-  let set_int8 buf _i i = set_int8 scratch 0 i; Buffer.add_subbytes buf scratch 0 1
-  let set_int16 buf _i i = set_int16 scratch 0 i; Buffer.add_subbytes buf scratch 0 2
-  let set_int32 buf _i i = set_int32 scratch 0 i; Buffer.add_subbytes buf scratch 0 4
-  let set_int64 buf _i i = set_int64 scratch 0 i; Buffer.add_subbytes buf scratch 0 8
-  let set_double buf _i f = set_double scratch 0 f; Buffer.add_subbytes buf scratch 0 8
+  let set_int8 buf _i i = Buffer.add_int8 buf i
+  let set_int16 buf _i i = Buffer.add_int16_be buf i
+  let set_int32 buf _i i = Buffer.add_int32_be buf i
+  let set_int64 buf _i i = Buffer.add_int64_be buf i
+  let set_double buf _i f = Buffer.add_int64_be buf (Int64.bits_of_float f)
 
   let length = Bytes.length
   let blit i i_pos o _o_pos len = Buffer.add_substring o i i_pos len
