@@ -1,3 +1,10 @@
+v1.5 2020-01-10 Paris
+---------------------
+
+* use Buffer's binary encodings of integers (>= 4.08.0)
+* bugfix: 32 bits architecture now working as well
+* bugfix: fix computation of size for the Bytes type
+
 v1.4 2018-04-27 Paris
 ---------------------
 

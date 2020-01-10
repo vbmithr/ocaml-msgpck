@@ -1,18 +1,20 @@
 opam-version: "2.0"
 name: "msgpck-repr"
-version: "1.3"
 maintainer: "Vincent Bernardoff <vb@luminar.eu.org>"
 authors: "Vincent Bernardoff <vb@luminar.eu.org>"
-synopsis: "Interface between msgpck and ocplib-json-typed"
 homepage: "https://github.com/vbmithr/ocaml-msgpck"
 license: "ISC"
 dev-repo: "git+https://github.com/vbmithr/ocaml-msgpck.git"
 bug-reports: "https://github.com/vbmithr/ocaml-msgpck/issues"
 tags: []
 depends: [
-  "dune" {build & >= "1.0"}
+  "dune" {build & >= "1.11.4"}
   "msgpck" {= version}
-  "ocplib-json-typed" {>= "0.6"}
-  "ocaml" { >= "4.02.0" }
+  "ocplib-json-typed" {>= "0.7.1"}
+  "ocaml" { >= "4.08.0" }
 ]
 build:[ "dune" "build" "-p" name "-j" jobs ]
+synopsis: "Fast MessagePack (http://msgpack.org) library -- ocplib-json-typed interface"
+description: """
+Interface between msgpck and ocplib-json-typed.
+"""
