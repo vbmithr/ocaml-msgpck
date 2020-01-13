@@ -4,27 +4,28 @@
    %%NAME%% %%VERSION%%
   ---------------------------------------------------------------------------*)
 
+open Alcotest
 module M = Msgpck
 
 let buf = Bytes.create (5+2*0xffff)
 
-let msgpck = Alcotest.testable M.pp M.equal
+let msgpck = testable M.pp M.equal
 
 let wr ?(section="") ?expected size v =
   let expected = match expected with Some v -> v | None -> v in
   let nb_written = M.Bytes.write buf v in
   let computed_size = M.size v in
-  Alcotest.(check int (section ^ ": nb_written") size nb_written);
-  Alcotest.(check int (section ^ ": size") nb_written computed_size);
+  check int (section ^ ": nb_written") size nb_written ;
+  check int (section ^ ": size") nb_written computed_size ;
   let nb_read, msg = M.Bytes.read buf in
-  Alcotest.(check int (section ^ ": nb_read") size nb_read);
-  Alcotest.check msgpck (section ^ ": msgpck equality") expected msg
+  check int (section ^ ": nb_read") size nb_read ;
+  check msgpck (section ^ ": msgpck equality") expected msg
 
-let check ?(msg="") testable ~expected buf =
-  let _nb_read, msgpck = M.Bytes.read buf in
-  Alcotest.check testable msg expected msgpck
 
 let negative_ints () =
+  let check ?(msg="") testable ~expected buf =
+    let _nb_read, msgpck = M.Bytes.read buf in
+    check testable msg expected msgpck in
   check msgpck ~expected:(Int (-1)) @@ Bytes.of_string "\xff" ;
   check msgpck ~expected:(Int (-33)) @@ Bytes.of_string "\xd0\xdf" ;
   check msgpck ~expected:(Int (-32767)) @@ Bytes.of_string "\xd1\x80\x01" ;
@@ -72,10 +73,10 @@ let bytes2 () =
   let msg = "my_payload is so really long tt" in
   let msgpck = M.of_bytes msg in
   let size = M.size msgpck in
-  Alcotest.(check int "bytes2: size" (String.length msg + 2) size) ;
+  check int "bytes2: size" (String.length msg + 2) size ;
   let buf = Bytes.create size in
   let nb_written = M.Bytes.write buf msgpck in
-  Alcotest.(check int "bytes2: size written" size nb_written)
+  check int "bytes2: size written" size nb_written
 
 let ext () =
   wr 3 (M.Ext (4, "1"));
@@ -124,9 +125,13 @@ let basic = [
 ]
 
 let () =
-  Alcotest.run "msgpck" [
+  let project = "msgpck" in
+  let report, k = Junit_alcotest.run_and_report project [
     "basic", basic ;
-  ]
+  ] in
+  Junit.(to_file (make [report]) (project ^ ".xml")) ;
+  ignore report ;
+  k ()
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2016 Vincent Bernardoff
