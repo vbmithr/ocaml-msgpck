@@ -11,8 +11,12 @@ depends: [
   "dune" {>= "1.11.4"}
   "ocplib-endian" {>= "1.0"}
   "ocaml" {>= "4.08.0"}
+  "alcotest" {with-test & >= "0.8.5"}
+  "junit_alcotest" {with-test >= "2.0.1"}
 ]
-build:[ "dune" "build" "-p" name "-j" jobs ]
+build: [ "dune" "build" "-p" name "-j" jobs ]
+run-test:  [ "dune" "runtest" "-p" name "-j" jobs ]
+
 synopsis: "Fast MessagePack (http://msgpack.org) library"
 description: """
 msgpck is written in pure OCaml.
