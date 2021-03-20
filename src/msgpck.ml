@@ -268,6 +268,10 @@ module Make (S : STRING) = struct
         set_int8 buf pos 0xce ;
         set_int32 buf (pos + 1) @@ Int32.of_int v ;
         5
+    | i when i >= 0L ->
+        set_int8 buf pos 0xcf ;
+        set_int64 buf (pos + 1) i ;
+        9
     | i when i >= Int64.(sub (neg 0x1fL) 1L) -> set_int8 buf pos v ; 1
     | i when i >= Int64.(sub (neg 0x7fL) 1L) ->
         set_int8 buf pos @@ 0xd0 ;
