@@ -24,11 +24,11 @@ type t =
   | Bytes of string
   | Ext of int * string
   | List of t list
-  | Map of (t * t) list
-  (** MessagePack types. *)
+  | Map of (t * t) list  (** MessagePack types. *)
 
 val compare : t -> t -> int
 val equal : t -> t -> bool
+
 val size : t -> int
 (** [size msg] is the size in bytes of the MessagePack serialization
     of message [msg]. *)
@@ -73,11 +73,11 @@ val to_map : t -> (t * t) list
 (** {1 Output signature for functors defined below } *)
 
 module type S = sig
-  type buf_in
   (** Type of input buffer (where MessagePack data will be read) *)
+  type buf_in
 
-  type buf_out
   (** Type of output buffer (where MessagePack data will be written) *)
+  type buf_out
 
   val read : ?pos:int -> buf_in -> int * t
   (** [read ?pos buf] is [(nb_read, t)], where [nb_read] is the number
@@ -102,18 +102,18 @@ module type S = sig
   (** [to_string msg] is the MessagePack serialization of [msg]. *)
 end
 
-module StringBuf : S with type buf_in = string and type buf_out = Buffer.t
 (** MessagePack library decoding from strings and writing in
     Buffers. *)
+module StringBuf : S with type buf_in = string and type buf_out = Buffer.t
 
-module BytesBuf : S with type buf_in = Bytes.t and type buf_out = Buffer.t
 (** MessagePack library decoding from bytes and writing in Buffers. *)
+module BytesBuf : S with type buf_in = Bytes.t and type buf_out = Buffer.t
 
-module String : S with type buf_in = string and type buf_out = Bytes.t
 (** MessagePack library decoding from strings and writing in bytes. *)
+module String : S with type buf_in = string and type buf_out = Bytes.t
 
-module Bytes : S with type buf_in = Bytes.t and type buf_out = Bytes.t
 (** MessagePack library decoding from bytes and writing in bytes. *)
+module Bytes : S with type buf_in = Bytes.t and type buf_out = Bytes.t
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2016 Vincent Bernardoff

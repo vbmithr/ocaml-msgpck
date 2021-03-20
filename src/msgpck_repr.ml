@@ -8,33 +8,33 @@ module Repr = struct
   type value = Msgpck.t
 
   let view : value -> value Json_repr.view = function
-  | Msgpck.Nil -> `Null
-  | Bool b -> `Bool b
-  | Float f -> `Float f
-  | String s -> `String s
-  | Bytes b -> `String b
-  | Int i -> `Float (float i)
-  | Uint32 i -> `Float Int32.(to_float (if i < 0l then add i max_int else i))
-  | Int32 i -> `Float (Int32.to_float i)
-  | Uint64 i -> `Float Int64.(to_float (if i < 0L then add i max_int else i))
-  | Int64 i -> `Float (Int64.to_float i)
-  | Float32 i -> `Float (Int32.float_of_bits i)
-  | Ext (i, b) -> `A [Int i ; String b]
-  | List l -> `A l
-  | Map m -> `A (List.map (fun (k, v) -> Msgpck.List [k ; v]) m)
+    | Msgpck.Nil -> `Null
+    | Bool b -> `Bool b
+    | Float f -> `Float f
+    | String s -> `String s
+    | Bytes b -> `String b
+    | Int i -> `Float (float i)
+    | Uint32 i -> `Float Int32.(to_float (if i < 0l then add i max_int else i))
+    | Int32 i -> `Float (Int32.to_float i)
+    | Uint64 i -> `Float Int64.(to_float (if i < 0L then add i max_int else i))
+    | Int64 i -> `Float (Int64.to_float i)
+    | Float32 i -> `Float (Int32.float_of_bits i)
+    | Ext (i, b) -> `A [Int i; String b]
+    | List l -> `A l
+    | Map m -> `A (List.map (fun (k, v) -> Msgpck.List [k; v]) m)
 
   let repr : value Json_repr.view -> value = function
-  | `A l -> List l
-  | `Bool b -> Bool b
-  | `Float f -> Float f
-  | `Null -> Nil
-  | `O kvs -> Map (List.map (fun (k, v) -> Msgpck.String k, v) kvs)
-  | `String s -> String s
+    | `A l -> List l
+    | `Bool b -> Bool b
+    | `Float f -> Float f
+    | `Null -> Nil
+    | `O kvs -> Map (List.map (fun (k, v) -> (Msgpck.String k, v)) kvs)
+    | `String s -> String s
 
   let repr_uid = Json_repr.repr_uid ()
 end
 
-include Json_encoding.Make(Repr)
+include Json_encoding.Make (Repr)
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2016 Vincent Bernardoff

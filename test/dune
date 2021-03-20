@@ -1,4 +1,4 @@
 (test
  (name test)
  (modules test)
- (libraries msgpck alcotest junit_alcotest))
+ (libraries msgpck alcotest))

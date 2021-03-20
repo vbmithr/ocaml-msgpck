@@ -4,13 +4,17 @@
    %%NAME%% %%VERSION%%
   ---------------------------------------------------------------------------*)
 
+open Json_encoding
 module Repr : Json_repr.Repr with type value := Msgpck.t
 
-val construct : 't Json_encoding.encoding -> 't -> Msgpck.t
-val destruct : 't Json_encoding.encoding -> Msgpck.t -> 't
-val custom : ('t -> Msgpck.t) ->
-  (Msgpck.t -> 't) ->
-  schema:Json_schema.schema -> 't Json_encoding.encoding
+val construct : 't encoding -> 't -> Msgpck.t
+val destruct : 't encoding -> Msgpck.t -> 't
+
+val custom :
+     ('t -> Msgpck.t)
+  -> (Msgpck.t -> 't)
+  -> schema:Json_schema.schema
+  -> 't encoding
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2016 Vincent Bernardoff
