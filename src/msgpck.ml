@@ -449,6 +449,8 @@ module Make (S : STRING) = struct
 
   let max_int31 = Int32.(shift_left one 30 |> pred)
   let min_int31 = Int32.(neg max_int31 |> pred)
+  let max_int31_64 = Int64.(shift_left one 30 |> pred)
+  let min_int31_64 = Int64.(neg max_int31_64 |> pred)
   let max_int63 = Int64.(shift_left one 62 |> pred)
   let min_int63 = Int64.(neg max_int63 |> pred)
 
@@ -468,7 +470,9 @@ module Make (S : STRING) = struct
 
   let parse_int64 i =
     match Sys.word_size with
-    | 32 -> Int64 i
+    | 32 ->
+        if i >= min_int31_64 && i <= max_int31_64 then Int (Int64.to_int i)
+        else Int64 i
     | 64 ->
         if i >= min_int63 && i <= max_int63 then Int (Int64.to_int i)
         else Int64 i
@@ -476,12 +480,60 @@ module Make (S : STRING) = struct
 
   let parse_uint64 i =
     match Sys.word_size with
-    | 32 -> Uint64 i
+    | 32 ->
+        if i >= 0L && i <= max_int31_64 then Int (Int64.to_int i) else Uint64 i
     | 64 -> if i >= 0L && i <= max_int63 then Int (Int64.to_int i) else Uint64 i
     | _ -> invalid_arg "Sys.word_size"
 
-  let read_one ?(pos = 0) buf =
+  let pairs l =
+    List.fold_left
+      (fun acc e ->
+        match acc with
+        | None, acc -> (Some e, acc)
+        | Some v, acc -> (None, (e, v) :: acc) )
+      (None, []) l
+    |> snd
+
+  let get_uint32 buf pos =
+    match get_int32 buf pos with
+    | i when i >= 0l -> Int64.of_int32 i
+    | i -> Int64.(add (add 0xffff_ffffL 1L) (of_int32 i))
+
+  let rec read_n ?(pos = 0) buf n =
+    let rec inner nbr elts n =
+      if n > 0L then
+        let nbr', elt = read ~pos:(pos + nbr) buf in
+        inner (nbr + nbr') (elt :: elts) (Int64.pred n)
+      else (nbr, elts) in
+    inner 0 [] n
+
+  and read ?(pos = 0) buf =
     match get_uint8 buf pos with
+    | i when i lsr 4 = 0x8 ->
+        let n = i land 0x0f in
+        read_n ~pos:(pos + 1) buf (Int64.of_int (2 * n))
+        |> fun (nb_read, elts) -> (1 + nb_read, Map (pairs elts))
+    | i when i lsr 4 = 0x9 ->
+        let n = i land 0x0f in
+        read_n ~pos:(pos + 1) buf (Int64.of_int n)
+        |> fun (nb_read, elts) -> (1 + nb_read, List (List.rev elts))
+    | 0xdc ->
+        let n = get_uint16 buf (pos + 1) in
+        read_n ~pos:(pos + 3) buf (Int64.of_int n)
+        |> fun (nb_read, elts) -> (3 + nb_read, List (List.rev elts))
+    | 0xdd ->
+        let n = get_uint32 buf (pos + 1) in
+        read_n ~pos:(pos + 5) buf n
+        |> fun (nb_read, elts) -> (5 + nb_read, List (List.rev elts))
+    | 0xde ->
+        let n = get_uint16 buf (pos + 1) in
+        read_n ~pos:(pos + 3) buf (Int64.of_int (2 * n))
+        |> fun (nb_read, elts) -> (3 + nb_read, Map (pairs elts))
+    | 0xdf ->
+        let n = get_uint32 buf (pos + 1) in
+        read_n ~pos:(pos + 5) buf (Int64.mul 2L n)
+        |> fun (nb_read, elts) -> (5 + nb_read, Map (pairs elts))
+    (* Atomic types (i.e. non-collection) *)
     | i when i < 0x80 -> (1, Int (i land 0x7f))
     | i when i lsr 5 = 5 ->
         let len = i land 0x1f in
@@ -551,60 +603,7 @@ module Make (S : STRING) = struct
         let len = get_int32 buf (pos + 1) |> Int32.to_int in
         (len + 5, String (sub buf (pos + 5) len))
     | i when i >= 0xe0 -> (1, Int (get_int8 buf pos))
-    | i -> invalid_arg (Printf.sprintf "read_one: unsupported tag 0x%x" i)
-
-  let pairs l =
-    List.fold_left
-      (fun acc e ->
-        match acc with
-        | None, acc -> (Some e, acc)
-        | Some v, acc -> (None, (e, v) :: acc) )
-      (None, []) l
-    |> snd
-
-  let get_uint16 buf pos =
-    match get_int16 buf pos with i when i >= 0 -> i | i -> 0xffff + 1 + i
-
-  let get_uint32 buf pos =
-    match get_int32 buf pos with
-    | i when i >= 0l -> Int64.of_int32 i
-    | i -> Int64.(add (add 0xffff_ffffL 1L) (of_int32 i))
-
-  let rec read_n ?(pos = 0) buf n =
-    let rec inner nbr elts n =
-      if n > 0L then
-        let nbr', elt = read ~pos:(pos + nbr) buf in
-        inner (nbr + nbr') (elt :: elts) (Int64.pred n)
-      else (nbr, elts) in
-    inner 0 [] n
-
-  and read ?(pos = 0) buf =
-    match get_uint8 buf pos with
-    | i when i lsr 4 = 0x8 ->
-        let n = i land 0x0f in
-        read_n ~pos:(pos + 1) buf (Int64.of_int (2 * n))
-        |> fun (nb_read, elts) -> (1 + nb_read, Map (pairs elts))
-    | i when i lsr 4 = 0x9 ->
-        let n = i land 0x0f in
-        read_n ~pos:(pos + 1) buf (Int64.of_int n)
-        |> fun (nb_read, elts) -> (1 + nb_read, List (List.rev elts))
-    | 0xdc ->
-        let n = get_uint16 buf (pos + 1) in
-        read_n ~pos:(pos + 3) buf (Int64.of_int n)
-        |> fun (nb_read, elts) -> (3 + nb_read, List (List.rev elts))
-    | 0xdd ->
-        let n = get_uint32 buf (pos + 1) in
-        read_n ~pos:(pos + 5) buf n
-        |> fun (nb_read, elts) -> (5 + nb_read, List (List.rev elts))
-    | 0xde ->
-        let n = get_uint16 buf (pos + 1) in
-        read_n ~pos:(pos + 3) buf (Int64.of_int (2 * n))
-        |> fun (nb_read, elts) -> (3 + nb_read, Map (pairs elts))
-    | 0xdf ->
-        let n = get_uint32 buf (pos + 1) in
-        read_n ~pos:(pos + 5) buf (Int64.mul 2L n)
-        |> fun (nb_read, elts) -> (5 + nb_read, Map (pairs elts))
-    | _ -> read_one ~pos buf
+    | i -> invalid_arg (Printf.sprintf "read: unsupported tag 0x%x" i)
 
   let read_all ?(pos = 0) buf =
     let len = length buf in

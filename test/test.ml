@@ -10,6 +10,37 @@ module M = Msgpck
 let buf = Bytes.create (5 + (2 * 0xffff))
 let msgpck = testable M.pp M.equal
 
+let roundtrip ?msg expected x =
+  let buf = Buffer.create 13 in
+  let _nbWritten = M.StringBuf.write buf x in
+  let _posOut, x' = M.String.read (Buffer.contents buf) in
+  let msg = "roundtrip" ^ match msg with None -> "" | Some msg -> ": " ^ msg in
+  check msgpck msg expected x'
+
+let max_int31 = Int.(shift_left one 30 |> pred)
+let min_int31 = Int.(neg max_int31 |> pred)
+let max_int31_32 = Int32.(shift_left one 30 |> pred)
+let min_int31_32 = Int32.(neg max_int31_32 |> pred)
+let max_int31_64 = Int64.(shift_left one 30 |> pred)
+let min_int31_64 = Int64.(neg max_int31_64 |> pred)
+let max_int63 = Int.(shift_left one 62 |> pred)
+let min_int63 = Int.(neg max_int63 |> pred)
+let max_int63_64 = Int64.(shift_left one 62 |> pred)
+let min_int63_64 = Int64.(neg max_int63_64 |> pred)
+
+let rt64 () =
+  List.iter
+    (fun (e, x) -> roundtrip e x)
+    [ (Int 1, Int32 1l); (Int max_int31, Int max_int31)
+    ; (Int max_int63, Int max_int63); (Int max_int63, Int64 max_int63_64)
+    ; (Int min_int63, Int64 min_int63_64); (Uint64 (-1L), Uint64 (-1L)) ]
+
+let rt32 () =
+  List.iter
+    (fun (e, x) -> roundtrip e x)
+    [ (Int 1, Int32 1l); (Int max_int31, Int max_int31)
+    ; (Int max_int31, Int max_int31) ]
+
 let wr ?(section = "") ?expected size v =
   let expected = match expected with Some v -> v | None -> v in
   let nb_written = M.Bytes.write buf v in
@@ -127,7 +158,8 @@ let basic =
   ; ("size2", `Quick, size2); ("size3", `Quick, size3); ("size5", `Quick, size5)
   ; ("size9", `Quick, size9); ("str", `Quick, str); ("bytes", `Quick, bytes)
   ; ("bytes2", `Quick, bytes2); ("ext", `Quick, ext); ("array", `Quick, array)
-  ; ("map", `Quick, map) ]
+  ; ("map", `Quick, map)
+  ; ("rt", `Quick, match Sys.word_size with 32 -> rt32 | _ -> rt64) ]
 
 let () = Alcotest.run "msgpck" [("basic,", basic)]
 
