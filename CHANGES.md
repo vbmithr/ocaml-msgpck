@@ -1,3 +1,10 @@
+v1.6 2021-03-20 Paris
+---------------------
+
+* bugfix: bug when serializing big Int values
+* bugfix: 32 bits architectures now also try to pack parsed ints into int type
+* ocamlformat
+
 v1.5 2020-01-10 Paris
 ---------------------
 
