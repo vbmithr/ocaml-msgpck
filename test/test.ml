@@ -51,19 +51,32 @@ let wr ?(section = "") ?expected size v =
   check int (section ^ ": nb_read") size nb_read ;
   check msgpck (section ^ ": msgpck equality") expected msg
 
+let checkb ?(msg = "") testable ~expected buf =
+  let _nb_read, msgpck = M.Bytes.read buf in
+  check testable msg expected msgpck
+
 let negative_ints () =
-  let check ?(msg = "") testable ~expected buf =
-    let _nb_read, msgpck = M.Bytes.read buf in
-    check testable msg expected msgpck in
-  check msgpck ~expected:(Int (-1)) @@ Bytes.of_string "\xff" ;
-  check msgpck ~expected:(Int (-33)) @@ Bytes.of_string "\xd0\xdf" ;
-  check msgpck ~expected:(Int (-32767)) @@ Bytes.of_string "\xd1\x80\x01" ;
-  check msgpck ~expected:(Int (-32768))
-  @@ Bytes.of_string "\xd2\xff\xff\x80\x00" ;
-  check msgpck ~expected:(Int (-2147483647))
-  @@ Bytes.of_string "\xd2\x80\x00\x00\x01" ;
-  check msgpck ~expected:(Int (-2147483648))
-  @@ Bytes.of_string "\xd3\xff\xff\xff\xff\x80\x00\x00\x00"
+  let open Bytes in
+  checkb msgpck ~expected:(Int (-1)) (of_string "\xff") ;
+  checkb msgpck ~expected:(Int (-33)) (of_string "\xd0\xdf") ;
+  checkb msgpck ~expected:(Int (-32767)) (of_string "\xd1\x80\x01") ;
+  checkb msgpck ~expected:(Int (-32768)) (of_string "\xd2\xff\xff\x80\x00")
+
+let negative_ints_64 () =
+  let open Bytes in
+  checkb msgpck
+    ~expected:(Int (Int32.to_int (-2147483647l)))
+    (of_string "\xd2\x80\x00\x00\x01") ;
+  checkb msgpck
+    ~expected:(Int (Int32.to_int (-2147483648l)))
+    (of_string "\xd3\xff\xff\xff\xff\x80\x00\x00\x00")
+
+let negative_ints_32 () =
+  let open Bytes in
+  checkb msgpck ~expected:(Int32 (-2147483647l))
+    (of_string "\xd2\x80\x00\x00\x01") ;
+  checkb msgpck ~expected:(Int32 (-2147483648l))
+    (of_string "\xd3\xff\xff\xff\xff\x80\x00\x00\x00")
 
 let size1 () =
   let l =
@@ -154,11 +167,14 @@ let map () =
   wr ~section:"string -> string" 3 M.(Map [(String "", String "")])
 
 let basic =
-  [ ("negative_ints", `Quick, negative_ints); ("size1", `Quick, size1)
-  ; ("size2", `Quick, size2); ("size3", `Quick, size3); ("size5", `Quick, size5)
-  ; ("size9", `Quick, size9); ("str", `Quick, str); ("bytes", `Quick, bytes)
-  ; ("bytes2", `Quick, bytes2); ("ext", `Quick, ext); ("array", `Quick, array)
-  ; ("map", `Quick, map)
+  [ ("negative_ints", `Quick, negative_ints)
+  ; ( "big_negative_ints"
+    , `Quick
+    , match Sys.word_size with 32 -> negative_ints_32 | _ -> negative_ints_64 )
+  ; ("size1", `Quick, size1); ("size2", `Quick, size2); ("size3", `Quick, size3)
+  ; ("size5", `Quick, size5); ("size9", `Quick, size9); ("str", `Quick, str)
+  ; ("bytes", `Quick, bytes); ("bytes2", `Quick, bytes2); ("ext", `Quick, ext)
+  ; ("array", `Quick, array); ("map", `Quick, map)
   ; ("rt", `Quick, match Sys.word_size with 32 -> rt32 | _ -> rt64) ]
 
 let () = Alcotest.run "msgpck" [("basic,", basic)]
