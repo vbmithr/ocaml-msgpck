@@ -180,30 +180,19 @@ let overflow () =
 let read_all () =
   let m0 = M.(List [Int 1; Int 2; Bool true]) in
   let b = M.Bytes.to_string m0 in
-  check int "len" 4 (Bytes.length b);
-
-  begin
-    let nr1, m1 = M.Bytes.read b in
-    check int "nr" 4 nr1;
-    check msgpck "m1" m0 m1;
-  end;
-
+  check int "len" 4 (Bytes.length b) ;
+  (let nr1, m1 = M.Bytes.read b in
+   check int "nr" 4 nr1 ; check msgpck "m1" m0 m1 ) ;
   let b_long = Bytes.create 5 in
-  Bytes.blit b 0 b_long 0 4;
-
-  begin
-    let nr2, m2 = M.Bytes.read b_long in
-    check int "nr2" 4 nr2;
-    check msgpck "m2" m0 m2;
-
-    let nr3, m3 = M.Bytes.read b_long ~pos:nr2 in
-    check int "nr3" 1 nr3;
-    check msgpck "m3" m3 (M.Int 0);
-
-    let _, l = M.Bytes.read_all b_long in
-    check (list msgpck) "read-all" l [m0; M.Int 0]
-  end;
-
+  Bytes.blit b 0 b_long 0 4 ;
+  (let nr2, m2 = M.Bytes.read b_long in
+   check int "nr2" 4 nr2 ;
+   check msgpck "m2" m0 m2 ;
+   let nr3, m3 = M.Bytes.read b_long ~pos:nr2 in
+   check int "nr3" 1 nr3 ;
+   check msgpck "m3" m3 (M.Int 0) ;
+   let _, l = M.Bytes.read_all b_long in
+   check (list msgpck) "read-all" l [m0; M.Int 0] ) ;
   ()
 
 let basic =
@@ -216,8 +205,7 @@ let basic =
   ; ("bytes", `Quick, bytes); ("bytes2", `Quick, bytes2); ("ext", `Quick, ext)
   ; ("array", `Quick, array); ("map", `Quick, map)
   ; ("rt", `Quick, match Sys.word_size with 32 -> rt32 | _ -> rt64)
-  ; ("read-all", `Quick, read_all)
-  ; ("overflow", `Quick, overflow) ]
+  ; ("read-all", `Quick, read_all); ("overflow", `Quick, overflow) ]
 
 let () = Alcotest.run "msgpck" [("basic,", basic)]
 
