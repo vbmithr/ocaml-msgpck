@@ -7,7 +7,7 @@
 open Alcotest
 module M = Msgpck
 
-let buf = Bytes.create (5 + (2 * 0xffff))
+let buf = Bytes.create (5 + (2 * 0x10000))
 let msgpck = testable M.pp M.equal
 
 let roundtrip ?msg expected x =
@@ -166,6 +166,17 @@ let map () =
   wr ~section:"concatenated maps" 3 M.(Map [(Nil, Map [])]) ;
   wr ~section:"string -> string" 3 M.(Map [(String "", String "")])
 
+let overflow () =
+  let msg = M.(List [Int 1; Int 2; Bool true]) in
+  let s = M.Bytes.to_string msg in
+  let b2 = Bytes.sub s 0 2 in
+  let nbRead, v = M.Bytes.read s in
+  check int "nbRead" 4 nbRead ;
+  check msgpck "v" msg v ;
+  check_raises "overflow" (Invalid_argument "index out of bounds") (fun () ->
+      let _, _ = M.Bytes.read b2 in
+      () )
+
 let basic =
   [ ("negative_ints", `Quick, negative_ints)
   ; ( "big_negative_ints"
@@ -175,7 +186,8 @@ let basic =
   ; ("size5", `Quick, size5); ("size9", `Quick, size9); ("str", `Quick, str)
   ; ("bytes", `Quick, bytes); ("bytes2", `Quick, bytes2); ("ext", `Quick, ext)
   ; ("array", `Quick, array); ("map", `Quick, map)
-  ; ("rt", `Quick, match Sys.word_size with 32 -> rt32 | _ -> rt64) ]
+  ; ("rt", `Quick, match Sys.word_size with 32 -> rt32 | _ -> rt64)
+  ; ("overflow", `Quick, overflow) ]
 
 let () = Alcotest.run "msgpck" [("basic,", basic)]
 

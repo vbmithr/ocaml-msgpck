@@ -31,7 +31,7 @@ module SIBO = struct
   type buf_in = string
   type buf_out = Bytes.t
 
-  include EndianString.BigEndian_unsafe
+  include EndianString.BigEndian
 
   let length = String.length
   let blit = Bytes.blit_string
@@ -43,7 +43,7 @@ module BIBO = struct
   type buf_in = Bytes.t
   type buf_out = Bytes.t
 
-  include EndianBytes.BigEndian_unsafe
+  include EndianBytes.BigEndian
 
   let length = Bytes.length
   let blit = Bytes.blit_string
@@ -55,7 +55,7 @@ module SIBUFO = struct
   type buf_in = string
   type buf_out = Buffer.t
 
-  include EndianString.BigEndian_unsafe
+  include EndianString.BigEndian
 
   let set_int8 buf _i i = Buffer.add_int8 buf i
   let set_int16 buf _i i = Buffer.add_int16_be buf i
@@ -72,7 +72,7 @@ module BIBUFO = struct
   type buf_in = Bytes.t
   type buf_out = Buffer.t
 
-  include EndianBytes.BigEndian_unsafe
+  include EndianBytes.BigEndian
 
   let set_int8 buf _i i = Buffer.add_int8 buf i
   let set_int16 buf _i i = Buffer.add_int16_be buf i
