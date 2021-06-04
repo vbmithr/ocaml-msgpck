@@ -1,7 +1,9 @@
 v1.7 2021-06-04 Paris
 ---------------------
 
-* bugfix: fix buffer overflows by not using _unsafe ocplib-endian functions
+* bugfix: fix buffer overflows by not using _unsafe ocplib-endian functions (@c-cube)
+* read_all: bugfix (pos vs n_read) (@c-cube)
+* test: fix for 32bit archs
 
 v1.6 2021-03-20 Paris
 ---------------------
