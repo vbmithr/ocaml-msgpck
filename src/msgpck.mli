@@ -89,6 +89,8 @@ module type S = sig
 
   val read_all : ?pos:int -> buf_in -> int * t list
   (** [read_all ?pos buf] reads all messages found in [buf].
+      @returns a tuple [(pos, l)] where [pos] is the new position
+      in the buffer, and [l] is the list of read messages.
 
       [@raise] Invalid_argument "msg" when there is no valid
       MessagePack value to be read from [buf] at position [pos]. *)
