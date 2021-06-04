@@ -1,3 +1,8 @@
+v1.7 2021-06-04 Paris
+---------------------
+
+* bugfix: fix buffer overflows by not using _unsafe ocplib-endian functions
+
 v1.6 2021-03-20 Paris
 ---------------------
 
