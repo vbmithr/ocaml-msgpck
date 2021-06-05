@@ -138,6 +138,7 @@ and size_int i =
   | i when i >= 0L && i <= 0xffL -> 2
   | i when i >= 0L && i <= 0xffffL -> 3
   | i when i >= 0L && i <= 0xffff_ffffL -> 5
+  | i when i >= 0L -> 9
   | i when i >= Int64.(sub (neg 0x1fL) 1L) -> 1
   | i when i >= Int64.(sub (neg 0x7fL) 1L) -> 2
   | i when i >= Int64.(sub (neg 0x7fffL) 1L) -> 3
