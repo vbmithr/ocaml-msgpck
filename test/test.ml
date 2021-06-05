@@ -63,20 +63,18 @@ let negative_ints () =
   checkb msgpck ~expected:(Int (-32768)) (of_string "\xd2\xff\xff\x80\x00")
 
 let negative_ints_64 () =
-  let open Bytes in
   checkb msgpck
     ~expected:(Int (Int32.to_int (-2147483647l)))
-    (of_string "\xd2\x80\x00\x00\x01") ;
+    (Bytes.of_string "\xd2\x80\x00\x00\x01") ;
   checkb msgpck
     ~expected:(Int (Int32.to_int (-2147483648l)))
-    (of_string "\xd3\xff\xff\xff\xff\x80\x00\x00\x00")
+    (Bytes.of_string "\xd3\xff\xff\xff\xff\x80\x00\x00\x00")
 
 let negative_ints_32 () =
-  let open Bytes in
   checkb msgpck ~expected:(Int32 (-2147483647l))
-    (of_string "\xd2\x80\x00\x00\x01") ;
-  checkb msgpck ~expected:(Int32 (-2147483648l))
-    (of_string "\xd3\xff\xff\xff\xff\x80\x00\x00\x00")
+    (Bytes.of_string "\xd2\x80\x00\x00\x01") ;
+  checkb msgpck ~expected:(Int64 (-2147483648L))
+    (Bytes.of_string "\xd3\xff\xff\xff\xff\x80\x00\x00\x00")
 
 let size1 () =
   let l =
