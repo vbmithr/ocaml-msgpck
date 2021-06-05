@@ -6,6 +6,7 @@
 
 open Alcotest
 module M = Msgpck
+module Q = QCheck
 
 let buf = Bytes.create (5 + (2 * 0x10000))
 let msgpck = testable M.pp M.equal
@@ -208,7 +209,133 @@ let basic =
   ; ("rt", `Quick, match Sys.word_size with 32 -> rt32 | _ -> rt64)
   ; ("read-all", `Quick, read_all); ("overflow", `Quick, overflow) ]
 
-let () = Alcotest.run "msgpck" [("basic,", basic)]
+module Props = struct
+  let gen_msg : M.t Q.Gen.t =
+    let open Q.Gen in
+    fix (fun self_sized depth ->
+        frequency @@ List.flatten [
+          [(3, let+ x = ((-100) -- 100) in M.Int x);
+           (1, let+ x = bool in M.Bool x);
+           (3, let+ s = string_size (0 -- 50) in M.String s);
+           (1, return M.of_nil);
+           (1, let+ f = float in M.Float f);
+           (1, let+ i = 0 -- 10 and+ s = string_size (0--10) in M.Ext (i,s));
+          ];
+          (if depth < 2
+           then [
+             (1, let+ l = list_size (0 -- 5) (self_sized (depth+1)) in M.List l);
+             (1, let+ l = list_size (0 -- 5)
+                     (let+ k = string_size ~gen:printable (0 -- 5)
+                      and+ v = self_sized (depth+1) in M.String k,v)
+              in
+              M.Map l);
+           ] else []);
+        ]) 0
+
+  let rec shrink =
+    let open Q.Iter in
+    let module S = Q.Shrink in
+    function
+    | M.Int i -> let+ j = S.int i in M.Int j
+    | M.Int32 i -> let+ i = S.int32 i in M.Int32 i
+    | M.Int64 i -> let+ i = S.int64 i in M.Int64 i
+    | M.Bool b -> if b then return (M.Bool false) else empty
+    | M.String s -> let+ s = S.string s in M.String s
+    | M.Bytes s -> let+ s = S.string s in M.String s
+    | M.List l -> let+ l = S.list ~shrink l in M.List l
+    | M.Map l -> let+ l = S.list ~shrink:(S.pair shrink shrink) l in M.Map l
+    | M.Float _ | M.Uint32 _ | M.Uint64 _ | M.Float32 _ | M.Nil | M.Ext _ -> empty
+
+  let arb_msg : M.t Q.arbitrary =
+    Q.make ~shrink ~print:(fun m -> Format.asprintf "%a" M.pp m) gen_msg
+
+  let pp_l out l = Format.fprintf out "[@[%a@]]"
+      (Format.pp_print_list ~pp_sep:(fun out () -> Format.fprintf out ";@ ") M.pp) l
+
+  let arb_msg_l : M.t list Q.arbitrary =
+    Q.make ~shrink:(Q.Shrink.list ~shrink)
+      ~print:(fun l -> Format.asprintf "%a" pp_l l)
+      Q.Gen.(list_size (0 -- 10) gen_msg)
+end
+
+let ser_then_deser =
+  QCheck_alcotest.to_alcotest ~verbose:true @@
+  Q.Test.make ~count:1000 ~name:"ser-then-deser"
+    Props.arb_msg
+    (fun m ->
+       let s = M.Bytes.to_string m in
+       let off, m2 = M.Bytes.read s in
+       m = m2 && off = Bytes.length s)
+
+let ser_then_deser_l =
+  QCheck_alcotest.to_alcotest ~verbose:true @@
+  Q.Test.make ~count:1000 ~name:"ser-then-deser-list"
+    Props.arb_msg_l
+    (fun l ->
+       let buf = Buffer.create 256 in
+       let i = ref 0 in
+       List.iter (fun m -> i := !i + M.BytesBuf.write ~pos:!i buf m) l;
+       let s = Buffer.contents buf in
+       let off, l2 = M.String.read_all s in
+       l = l2 && off = Buffer.length buf)
+
+(* test what happens when we serialize but then read only a prefix of the
+   resulting byte array *)
+let ser_then_deser_sub_list =
+  QCheck_alcotest.to_alcotest ~verbose:true @@
+  let rec list_take n l =
+    match l with
+    | _ when n <= 0 -> l
+    | [] -> []
+    | x :: tl -> x :: list_take (n-1) tl
+  in
+  let arb' =
+    Q.(
+      let gen =
+        let open Q.Gen in
+        let* l = list_size (1--15) Props.gen_msg in
+        let s = Bytes.unsafe_to_string @@ M.String.to_string_all l in
+        let+ i = 0 -- String.length s in
+        l, s, i
+    in
+    let shrink (l,s,i) =
+      let open Q.Iter in
+      (* shrink [i] *)
+      let s1 = let+ i = Q.Shrink.int i in (l,s,i) in
+      (* shrink [l] and then adjust s and i *)
+      let s2 =
+        let+ l = Q.Shrink.list ~shrink:Props.shrink l in
+        let s = Bytes.unsafe_to_string @@ M.String.to_string_all l in
+        let i = min i (String.length s) in
+        l, s, i
+      in
+      append s1 s2
+    in
+    let print (l,_s,i) = Format.asprintf "i=%d, l=%a" i Props.pp_l l in
+    make ~shrink ~print gen)
+  in
+  Q.Test.make ~count:1000 ~name:"ser-then-deser-sub-list"
+    arb'
+    (fun (l,s,i) ->
+       let sub = String.sub s 0 i in
+       let _off, l2 = M.String.read_all ~allow_partial:true sub in
+       if List.length l2 > List.length l then (
+         Q.Test.fail_reportf "bad len:@ l=%a;@ l2=%a" Props.pp_l l Props.pp_l l2
+       );
+       let l' = list_take (List.length l2) l in
+       if l <> l' then (
+         Q.Test.fail_reportf "diff:@ l'=%a;@ l2=%a" Props.pp_l l' Props.pp_l l2
+       );
+       true)
+
+let props =
+  [ ser_then_deser
+  ; ser_then_deser_l
+  ; ser_then_deser_sub_list
+  ]
+
+let () = Alcotest.run "msgpck"
+    [("basic", basic); ("prop", props)]
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2016 Vincent Bernardoff
