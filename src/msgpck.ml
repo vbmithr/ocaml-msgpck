@@ -174,10 +174,10 @@ let rec pp ppf t =
   | Nil -> pp_print_string ppf "()"
   | Bool b -> pp_print_bool ppf b
   | Int i -> pp_print_int ppf i
-  | Uint32 i -> fprintf ppf "%ld" i
-  | Int32 i -> fprintf ppf "%ld" i
-  | Uint64 i -> fprintf ppf "%Ld" i
-  | Int64 i -> fprintf ppf "%Ld" i
+  | Uint32 i -> fprintf ppf "%ldul" i
+  | Int32 i -> fprintf ppf "%ldl" i
+  | Uint64 i -> fprintf ppf "%LdUL" i
+  | Int64 i -> fprintf ppf "%LdL" i
   | Float32 f -> pp_print_float ppf (Int32.to_float f)
   | Float f -> pp_print_float ppf f
   | String s -> pp_print_string ppf s
