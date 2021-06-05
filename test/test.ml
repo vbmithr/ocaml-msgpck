@@ -97,7 +97,7 @@ let size5 () =
   let l =
     M.
       [ (Some (Int Int32.(to_int max_int)), Int32 Int32.max_int)
-      ; (None, Int 0x3fff_ffff) ] in
+      ; (Some (Int ~-1), Int32 0xffff_ffffl) ] in
   ListLabels.iter l ~f:(fun (expected, v) -> wr ?expected 5 v)
 
 let size9 () =
