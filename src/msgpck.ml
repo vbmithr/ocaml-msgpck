@@ -609,11 +609,10 @@ module Make (S : STRING) = struct
     let len = length buf in
     let rec inner acc pos =
       if pos >= len then (pos, List.rev acc)
-      else (
+      else
         let n_read, msg = read ~pos buf in
         let new_pos = pos + n_read in
-        inner (msg :: acc) new_pos
-      ) in
+        inner (msg :: acc) new_pos in
     inner [] pos
 end
 
