@@ -87,10 +87,17 @@ module type S = sig
       [@raise] Invalid_argument "msg" when there is no valid
       MessagePack value to be read from [buf] at position [pos]. *)
 
-  val read_all : ?pos:int -> buf_in -> int * t list
+  val read_all : ?allow_partial:bool -> ?pos:int -> buf_in -> int * t list
   (** [read_all ?pos buf] reads all messages found in [buf].
-      @returns a tuple [(pos, l)] where [pos] is the new position
+      @return a tuple [(pos, l)] where [pos] is the new position
       in the buffer, and [l] is the list of read messages.
+
+      @param allow_partial if true (default),
+        then [read_all buf] will not fail if it
+        meets a partial value in [buf]. It will only return the full values
+        read prior to the partial value. The caller can then extend the buffer,
+        for example after performing some more IO, and call [read_all] again.
+        (since 1.8)
 
       [@raise] Invalid_argument "msg" when there is no valid
       MessagePack value to be read from [buf] at position [pos]. *)
@@ -100,8 +107,17 @@ module type S = sig
       written on [buf] at position [?pos]. The serialization of [msg]
       have been written to [buf] starting at [?pos]. *)
 
+  val write_all : ?pos:int -> buf_out -> t list -> int
+  (** [write_all buf l] writes all messages of [l] into the buffer, and returns
+      how many bytes were written.
+      @since 1.8 *)
+
   val to_string : t -> buf_out
   (** [to_string msg] is the MessagePack serialization of [msg]. *)
+
+  val to_string_all : t list -> buf_out
+  (** [to_string l] is the MessagePack serialization of the list of objects [l],
+      as a set of consecutive serialized values. *)
 end
 
 (** MessagePack library decoding from strings and writing in
