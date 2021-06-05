@@ -92,11 +92,14 @@ let size3 () =
   ListLabels.iter l ~f:(wr 3)
 
 let size5 () =
-  let l =
+  let l32 = M.[(None, Int32 Int32.max_int); (None, Int 0x3fff_ffff)] in
+  let l64 =
     M.
       [ (Some (Int Int32.(to_int max_int)), Int32 Int32.max_int)
       ; (Some (Int ~-1), Int32 0xffff_ffffl) ] in
-  ListLabels.iter l ~f:(fun (expected, v) -> wr ?expected 5 v)
+  ListLabels.iter
+    (if Sys.word_size = 32 then l32 else l64)
+    ~f:(fun (expected, v) -> wr ?expected 5 v)
 
 let size9 () =
   let l = M.[(None, Int64 Int64.max_int); (None, Float 0.)] in
