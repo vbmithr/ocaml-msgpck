@@ -29,6 +29,12 @@ let min_int63 = Int.(neg max_int63 |> pred)
 let max_int63_64 = Int64.(shift_left one 62 |> pred)
 let min_int63_64 = Int64.(neg max_int63_64 |> pred)
 
+let reg_int_1 () =
+  let m = M.(Int 4294967296) in
+  let s = M.String.to_string m in
+  let _, m2 = M.Bytes.read s in
+  check msgpck "read int back" m m2
+
 let rt64 () =
   List.iter
     (fun (e, x) -> roundtrip e x)
@@ -207,6 +213,7 @@ let basic =
   ; ("bytes", `Quick, bytes); ("bytes2", `Quick, bytes2); ("ext", `Quick, ext)
   ; ("array", `Quick, array); ("map", `Quick, map)
   ; ("rt", `Quick, match Sys.word_size with 32 -> rt32 | _ -> rt64)
+  ; ("reg-int-1", `Quick, reg_int_1)
   ; ("read-all", `Quick, read_all); ("overflow", `Quick, overflow) ]
 
 module Props = struct
@@ -214,17 +221,17 @@ module Props = struct
     let open Q.Gen in
     fix (fun self_sized depth ->
         frequency @@ List.flatten [
-          [(3, let+ x = ((-100) -- 100) in M.Int x);
+          [(2, let+ x = int in M.Int x);
            (1, let+ x = bool in M.Bool x);
-           (3, let+ s = string_size (0 -- 50) in M.String s);
+           (2, let+ s = string_size (0 -- 50) in M.String s);
            (1, return M.of_nil);
            (1, let+ f = float in M.Float f);
            (1, let+ i = 0 -- 10 and+ s = string_size (0--10) in M.Ext (i,s));
           ];
           (if depth < 2
            then [
-             (1, let+ l = list_size (0 -- 5) (self_sized (depth+1)) in M.List l);
-             (1, let+ l = list_size (0 -- 5)
+             (2, let+ l = list_size (0 -- (if depth=0 then 10 else 2)) (self_sized (depth+1)) in M.List l);
+             (2, let+ l = list_size (0 -- (if depth=0 then 10 else 2))
                      (let+ k = string_size ~gen:printable (0 -- 5)
                       and+ v = self_sized (depth+1) in M.String k,v)
               in
