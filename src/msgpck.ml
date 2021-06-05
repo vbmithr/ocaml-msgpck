@@ -228,14 +228,17 @@ let to_map = function Map l -> l | v -> raise_invalid_arg "map" v
 module type S = sig
   type buf_in
   type buf_out
-
   val read : ?pos:int -> buf_in -> int * t
-  val read_all : ?pos:int -> buf_in -> int * t list
+  val read_all : ?allow_partial:bool -> ?pos:int -> buf_in -> int * t list
   val write : ?pos:int -> buf_out -> t -> int
+  val write_all : ?pos:int -> buf_out -> t list -> int
   val to_string : t -> buf_out
+  val to_string_all : t list -> buf_out
 end
 
-module Make (S : STRING) = struct
+module Make (S : STRING)
+  : S with type buf_in = S.buf_in and type buf_out = S.buf_out
+= struct
   include S
 
   let write_nil ?(pos = 0) buf = set_int8 buf pos 0xc0 ; 1
@@ -442,9 +445,22 @@ module Make (S : STRING) = struct
             nbw + write ~pos:(pos + nbw) buf v )
           nb_written l
 
+  let write_all ?(pos=0) buf l =
+    let nb_write = ref 0 in
+    List.iter
+      (fun m -> nb_write := !nb_write + write ~pos:(pos + !nb_write) buf m)
+      l;
+    !nb_write
+
   let to_string msg =
     let buf = create_out @@ size msg in
     let _nb_written : int = write buf msg in
+    buf
+
+  let to_string_all l =
+    let size = List.fold_left (fun s x -> s + size x) 0 l in
+    let buf = create_out size in
+    let _nb_written : int = write_all buf l in
     buf
 
   let max_int31 = Int32.(shift_left one 30 |> pred)
@@ -605,14 +621,21 @@ module Make (S : STRING) = struct
     | i when i >= 0xe0 -> (1, Int (get_int8 buf pos))
     | i -> invalid_arg (Printf.sprintf "read: unsupported tag 0x%x" i)
 
-  let read_all ?(pos = 0) buf =
+  let read_all ?(allow_partial=true) ?(pos = 0) buf =
     let len = length buf in
     let rec inner acc pos =
       if pos >= len then (pos, List.rev acc)
-      else
-        let n_read, msg = read ~pos buf in
-        let new_pos = pos + n_read in
-        inner (msg :: acc) new_pos in
+      else (
+        match read ~pos buf with
+        | n_read, msg ->
+          let new_pos = pos + n_read in
+          inner (msg :: acc) new_pos
+        | exception e ->
+          if allow_partial
+          then (pos, List.rev acc)
+          else raise e
+      )
+    in
     inner [] pos
 end
 
