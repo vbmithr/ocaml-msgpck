@@ -12,7 +12,7 @@ msgpck is distributed under the ISC license.
 Homepage: https://github.com/vbmithr/ocaml-msgpck
 Contact: Vincent Bernardoff `<vb@luminar.eu.org>`
 
-Documentation: https://vbmithr.github.io/ocaml-msgpck/
+Documentation: https://vbmithr.github.io/ocaml-msgpck/doc/
 
 ## Installation
 
