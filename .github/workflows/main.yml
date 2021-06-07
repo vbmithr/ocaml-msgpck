@@ -9,17 +9,31 @@ jobs:
           - macos-latest
           - ubuntu-latest
           - windows-latest
-        ocaml-compiler:
-          - 4.8.x
-          - 4.12.x
+        ocaml-version:
+          - 4.8.1
+          - 4.12.0
           - ocaml-variants.4.12.0+options,ocaml-option-flambda
           - ocaml-variants.4.12.0+options,ocaml-option-32bit
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
+
     - uses: ocaml/setup-ocaml@v2
       with:
         ocaml-compiler: ${{ matrix.ocaml-compiler }}
+
+    # Setup ocaml/opam
+    - name: Setup ocaml/opam on Windows
+      uses: avsm/setup-ocaml@v2
+      if: runner.os == 'Windows'
+      with:
+        ocaml-compiler: ocaml-variants.${{ matrix.ocaml-version }}+mingw64c
+    - name: Setup ocaml/opam on Unix
+      uses: avsm/setup-ocaml@v2
+      if: runner.os != 'Windows'
+      with:
+        ocaml-compiler: ocaml-base-compiler.${{ matrix.ocaml-version }}
+
     - run: opam pin -n .
     - run: opam depext -yt msgpck msgpck-repr
     - run: opam install -t . --deps-only
