@@ -12,6 +12,8 @@ jobs:
         ocaml-compiler:
           - 4.8.x
           - 4.12.x
+          - ocaml-variants.4.12.0+options,ocaml-option-flambda
+          - ocaml-variants.4.12.0+options,ocaml-option-32bit
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
